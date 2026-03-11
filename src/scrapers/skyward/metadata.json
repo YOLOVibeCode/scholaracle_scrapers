@@ -1,0 +1,1 @@
+{"id":"skyward-browser","name":"Skyward Family Access","version":"1.0.0","description":"Scrapes student data from Skyward Family Access via browser automation (username + password)","platforms":["skyward.*","*.iscorp.com"],"capabilities":{"grades":true,"assignments":true,"attendance":true,"schedule":true,"messages":false,"documents":false}}

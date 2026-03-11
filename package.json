@@ -1,0 +1,46 @@
+{
+  "name": "scholaracle-scraper",
+  "version": "0.1.0",
+  "description": "Scholaracle Scraper Library — AI-powered scrapers for educational platforms",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "scholaracle-scraper": "dist/bin/cli.js"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "ts-node --transpile-only bin/cli.ts",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src bin --ext .ts",
+    "lint:fix": "eslint src bin --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"bin/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"bin/**/*.ts\"",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist coverage *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
+    "@google/generative-ai": "^0.24.0",
+    "axios": "^1.7.0",
+    "commander": "^12.1.0",
+    "form-data": "^4.0.5",
+    "inquirer": "^9.3.0",
+    "open": "^11.0.0",
+    "openai": "^6.22.0",
+    "playwright": "^1.48.0"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^9.0.7",
+    "@types/jest": "^29.5.11",
+    "@types/node": "^20.11.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}

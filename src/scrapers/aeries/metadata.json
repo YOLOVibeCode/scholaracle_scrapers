@@ -1,0 +1,1 @@
+{"id":"aeries-browser","name":"Aeries Parent Portal","version":"1.0.0","description":"Scrapes student data from Aeries Parent Portal via browser automation (email + password login)","platforms":["*.aeries.net"],"capabilities":{"grades":true,"assignments":true,"attendance":true,"schedule":false,"messages":false,"documents":false}}

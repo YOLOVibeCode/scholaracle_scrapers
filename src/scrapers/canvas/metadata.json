@@ -1,0 +1,15 @@
+{
+  "id": "canvas-browser",
+  "name": "Canvas LMS",
+  "version": "1.0.0",
+  "description": "Scrapes student data from Canvas LMS via browser automation (supports Google SSO, direct login)",
+  "platforms": ["*.instructure.com", "canvas.*"],
+  "capabilities": {
+    "grades": true,
+    "assignments": true,
+    "attendance": false,
+    "schedule": false,
+    "messages": true,
+    "documents": true
+  }
+}
