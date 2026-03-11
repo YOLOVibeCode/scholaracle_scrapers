@@ -1,0 +1,512 @@
+# Scholaracle Scraper Library — AI Coding Rules
+
+ROLE: engineer STRICT=true
+
+## Stack
+TypeScript 5.3 strict | Node 20 | Jest 29 | ts-jest | Playwright | Commander | Axios | OpenAI + Anthropic SDKs
+
+## Response Format
+- Code + 3-line max docstring
+- No explanation unless asked
+- If >50 lines: modularize into helpers
+- If ambiguous: 2 implementations + 1-line tradeoff each
+- Assume experienced user—skip basics
+
+## Before Writing
+1. Search codebase—reuse existing patterns
+2. Check `README.md` and `docs/` for specs
+3. If new scraper: follow `src/scrapers/_template/` pattern
+4. If new entity mapping: confirm entity type exists in `src/core/types.ts`
+5. If bug fix or feature: write failing test FIRST (M1)
+6. List edge cases you'll handle
+
+## Code Standards
+- TypeScript strict, no `any`—use `unknown` or generics
+- Exception: `page.evaluate()` Playwright returns may use `any` with immediate cast
+- `readonly` on all interface fields
+- `I` prefix for interfaces (matches `ISlcDeltaOp`, `IScraperConfig`, etc.)
+- Errors: throw (not return null)
+- No hardcoded credentials or URLs—use `ScraperConfig` or env
+- No console.log—use structured logging
+- KISS + YAGNI + DRY × SOLID
+- Complexity max 10, depth max 3, functions max 50 lines
+
+## Project Structure
+```
+scholaracle_scrapers/
+├── bin/
+│   └── cli.ts              # CLI entry point (Commander)
+├── src/
+│   ├── ai/                 # AI client for scraper generation/troubleshooting
+│   │   ├── client.ts
+│   │   └── prompts.ts
+│   ├── cli/                # CLI commands
+│   │   ├── setup.ts        # Connect to Scholaracle account
+│   │   ├── run.ts          # Run scraper + validate + upload
+│   │   ├── validate.ts     # Run + validate only (no upload)
+│   │   ├── generate.ts     # AI scraper generation
+│   │   ├── schedule.ts     # Cron scheduling
+│   │   └── troubleshoot.ts # AI error diagnosis
+│   ├── core/               # Framework
+│   │   ├── types.ts        # All entity types + envelope schema (source of truth)
+│   │   ├── base-scraper.ts # Abstract base class for all scrapers
+│   │   ├── validator.ts    # Envelope + op validation
+│   │   ├── uploader.ts     # Scholaracle Ingest API client
+│   │   └── config.ts       # Local config manager (~/.scholaracle-scraper/)
+│   └── scrapers/           # Platform implementations
+│       ├── _template/      # Template for new scrapers
+│       ├── canvas/         # Canvas LMS
+│       ├── aeries/         # Aeries SIS
+│       └── skyward/        # Skyward
+├── prompts/                # AI prompt templates
+├── docs/                   # Documentation
+└── output/                 # Scraper output directory
+```
+
+---
+
+## Mandates (ENFORCE STRICTLY)
+
+### M1: TDD — Red-Green-Refactor
+
+Every feature, scraper, and bug fix MUST start with a failing test.
+
+**Workflow:**
+1. **RED** — Write a test that fails (describes desired behavior)
+2. **GREEN** — Write the minimum code to make it pass
+3. **REFACTOR** — Clean up while keeping tests green
+
+```typescript
+// ❌ REJECT — implementing before testing
+export function normalizeStatus(raw: string): string {
+  if (raw.includes('miss')) return 'missing';
+  return 'unknown';
+}
+// then writing tests after
+
+// ✅ REQUIRE — test first, implement second
+// Step 1: Write the test (RED)
+describe('normalizeStatus', () => {
+  it('should normalize "Missing" to "missing"', () => {
+    expect(normalizeStatus('Missing')).toBe('missing');
+  });
+  it('should normalize "Submitted Late" to "late"', () => {
+    expect(normalizeStatus('Submitted Late')).toBe('late');
+  });
+  it('should return "unknown" for unrecognized status', () => {
+    expect(normalizeStatus('foobar')).toBe('unknown');
+  });
+});
+// Step 2: Implement to pass (GREEN)
+// Step 3: Refactor if needed
+```
+
+### M2: Interface Segregation (ISP)
+
+Interfaces must be small and focused on a single concern. No god interfaces.
+
+```typescript
+// ❌ REJECT — god interface
+interface IScraper {
+  initialize(config: IScraperConfig): Promise<void>;
+  authenticate(): Promise<{ success: boolean }>;
+  scrape(): Promise<Record<string, unknown>>;
+  transform(raw: Record<string, unknown>): ISlcDeltaOp[];
+  cleanup(): Promise<void>;
+  validate(envelope: ISlcIngestEnvelopeV1): EnvelopeValidationReport;
+  upload(envelope: ISlcIngestEnvelopeV1): Promise<UploadResult>;
+  generate(prompt: string): Promise<string>;
+  troubleshoot(error: string): Promise<string>;
+}
+
+// ✅ REQUIRE — granular interfaces per concern
+interface IScraperLifecycle {
+  initialize(config: IScraperConfig): Promise<void>;
+  authenticate(): Promise<{ success: boolean; message?: string }>;
+  scrape(): Promise<Record<string, unknown>>;
+  cleanup(): Promise<void>;
+}
+
+interface IDataTransformer<TRaw = Record<string, unknown>> {
+  transform(raw: TRaw, ctx: TransformContext): ISlcDeltaOp[];
+}
+
+interface IEnvelopeValidator {
+  validate(envelope: ISlcIngestEnvelopeV1): EnvelopeValidationReport;
+}
+
+interface IEnvelopeUploader {
+  upload(envelope: ISlcIngestEnvelopeV1): Promise<UploadResult>;
+}
+```
+
+### M3: Three-File Scraper Pattern
+
+Every platform scraper MUST have exactly three files:
+
+```
+src/scrapers/[platform]/
+├── metadata.json              # Scraper identity + capabilities
+├── [platform]-scraper.ts      # Playwright automation (extends BaseScraper)
+└── [platform]-transformer.ts  # Raw data → ISlcDeltaOp[] (pure function)
+```
+
+```typescript
+// ❌ REJECT — mixing scraping and transformation in one file
+export class FooScraper extends BaseScraper {
+  async scrape() { /* browser logic */ }
+  transform(raw) {
+    // 200 lines of data mapping mixed with scraper class
+  }
+}
+
+// ✅ REQUIRE — separate transformer file
+// foo-scraper.ts
+export class FooScraper extends BaseScraper {
+  async scrape() { /* browser logic only */ }
+  transform(raw: Record<string, unknown>) {
+    return transformFooExtract(raw as IFooBrowserExtract, this.getContext());
+  }
+}
+
+// foo-transformer.ts (pure function, easy to test)
+export function transformFooExtract(
+  extract: IFooBrowserExtract,
+  ctx: TransformContext,
+): ISlcDeltaOp[] { /* mapping logic */ }
+```
+
+### M4: TransformContext Pattern
+
+All transformers receive a `TransformContext` — never hardcode key fields.
+
+```typescript
+// ❌ REJECT — hardcoded provider/adapterId in transformer
+ops.push({
+  op: 'upsert', entity: 'course',
+  key: { provider: 'canvas', adapterId: 'com.instructure.canvas', externalId: id },
+  observedAt: now,
+  record: { title },
+});
+
+// ✅ REQUIRE — use TransformContext
+export interface TransformContext {
+  provider: string;
+  adapterId: string;
+  studentExternalId: string;
+  institutionExternalId: string;
+}
+
+ops.push({
+  op: 'upsert', entity: 'course',
+  key: { ...baseKey, externalId: id },  // baseKey derived from ctx
+  observedAt: now,
+  record: { title },
+});
+```
+
+### M5: Envelope Validation
+
+All envelopes MUST be validated before upload.
+
+```typescript
+// ❌ REJECT — uploading without validation
+const envelope = scraper.assembleEnvelope(ops);
+await uploader.upload(envelope);
+
+// ✅ REQUIRE — validate first
+import { validateEnvelope } from '../core/validator';
+
+const envelope = scraper.assembleEnvelope(ops);
+const report = validateEnvelope(envelope);
+if (!report.passed) {
+  throw new Error(`Envelope invalid: ${report.errorCount} errors`);
+}
+await uploader.upload(envelope);
+```
+
+### M6: BaseScraper Lifecycle
+
+All scrapers MUST extend `BaseScraper` from `src/core/base-scraper.ts` and implement the full lifecycle.
+
+```typescript
+// ❌ REJECT — standalone scraper without BaseScraper
+export async function scrapeFoo(config) {
+  const browser = await chromium.launch();
+  // ... all logic inline
+}
+
+// ✅ REQUIRE — extend BaseScraper
+import { BaseScraper } from '../../core/base-scraper';
+
+export class FooScraper extends BaseScraper {
+  get metadata(): IScraperMetadata { /* ... */ }
+  async initialize(config: IScraperConfig): Promise<void> { /* launch browser */ }
+  async authenticate(): Promise<{ success: boolean; message?: string }> { /* login */ }
+  async scrape(): Promise<Record<string, unknown>> { /* extract data */ }
+  transform(rawData: Record<string, unknown>): ISlcDeltaOp[] { /* delegate to transformer */ }
+  async cleanup(): Promise<void> { /* close browser */ }
+}
+```
+
+### M7: Credential Safety
+
+Never log, hardcode, or commit credentials. Never call real portals in tests.
+
+```typescript
+// ❌ REJECT — hardcoded credentials
+const page = await browser.newPage();
+await page.goto('https://real-school.instructure.com');
+await page.fill('#username', 'student@school.edu');
+await page.fill('#password', 'realPassword123');
+
+// ✅ REQUIRE — credentials from config
+await page.goto(this.config!.credentials.baseUrl);
+if (this.config!.credentials.username) {
+  await page.fill('#username', this.config!.credentials.username);
+}
+
+// ✅ REQUIRE — mock Playwright in tests
+jest.mock('playwright', () => ({
+  chromium: { launch: jest.fn().mockResolvedValue(mockBrowser) },
+}));
+```
+
+### M8: Contract Types
+
+All entity shapes and envelope types come from `src/core/types.ts`. No local duplicates.
+
+```typescript
+// ❌ REJECT — local type definitions
+interface Assignment { title: string; dueDate: string; }
+interface Course { name: string; code: string; }
+
+// ✅ REQUIRE — import from core types
+import type {
+  ISlcAssignment,
+  ISlcCourse,
+  ISlcDeltaOp,
+  ISlcIngestEnvelopeV1,
+  SlcEntityType,
+} from '../../core/types';
+```
+
+### M9: Test Factory Pattern
+
+Use factory helpers for test data. Colocate tests next to source files.
+
+```typescript
+// ❌ REJECT — inline test data with magic values
+it('should transform courses', () => {
+  const ops = transformCanvasExtract({
+    user: 'Emma', courses: [{ id: '1', name: 'Math', courseCode: 'M-1',
+    url: 'https://canvas.com/1', assignments: [], modules: [], files: [] }],
+    toDoItems: [], upcomingEvents: [], announcements: [], timestamp: '2026-02-16T12:00:00Z',
+  }, { provider: 'canvas', adapterId: 'com.instructure.canvas',
+    studentExternalId: 'stu-1', institutionExternalId: 'inst-1' });
+  // ...
+});
+
+// ✅ REQUIRE — factory helpers + shared context
+const ctx: TransformContext = {
+  provider: 'canvas',
+  adapterId: 'com.instructure.canvas',
+  studentExternalId: 'stu-emma',
+  institutionExternalId: 'inst-ldisd',
+};
+
+function makeExtract(overrides?: Partial<ICanvasBrowserExtract>): ICanvasBrowserExtract {
+  return { user: 'Emma Lewis', courses: [/* defaults */], ...overrides };
+}
+
+it('should transform courses', () => {
+  const ops = transformCanvasExtract(makeExtract(), ctx);
+  // clean, readable assertions
+});
+```
+
+---
+
+## Domain Model
+
+### Entity Types (12 total — defined in `src/core/types.ts`)
+
+| Entity | Required Fields | Description |
+|--------|----------------|-------------|
+| `assignment` | title | Graded item (homework, quiz, test) |
+| `course` | title | Class/section |
+| `gradeSnapshot` | courseExternalId, asOfDate | Current grade per course |
+| `attendanceEvent` | date, status | Presence/absence record |
+| `teacher` | name | Instructor |
+| `courseMaterial` | title, courseExternalId, type | Files, links, syllabi |
+| `message` | subject, body, senderName, sentAt | Announcements, messages |
+| `studentProfile` | name | Student identity |
+| `institution` | name | School/district |
+| `academicTerm` | title, startDate, endDate | Semester/quarter |
+| `eventSeries` | title | Recurring calendar events |
+| `eventOverride` | seriesExternalId | Single-instance modifications |
+
+### Scraper Lifecycle
+```
+Configure → Login → Extract Raw Data → Transform to ISlcDeltaOp[] → Validate Envelope → Upload
+   |           |            |                    |                        |               |
+ScraperConfig  authenticate()  scrape()      transform()          validateEnvelope()  uploader.upload()
+```
+
+---
+
+## Testing Requirements
+
+### Test Pyramid
+
+| Layer | What | How | Mock? |
+|-------|------|-----|-------|
+| **Unit** | Transformers, validators, config | Jest + factory helpers | No mocks — pure functions |
+| **Integration** | BaseScraper lifecycle, uploader | Jest + mock scraper subclass | Mock Playwright, mock axios |
+| **E2E** | Full CLI pipeline | Jest + mock browser + real validator | Mock browser + mock API server |
+
+### Test Conventions
+- Files: `*.test.ts` colocated next to source
+- Factories: `makeExtract()`, `makeAssignmentOp()`, `makeValidEnvelope()` helpers
+- Every transformer test must check ALL entity types it produces
+- Every transformer test must check empty/edge-case inputs
+- Coverage: aim for 100% on transformers and validators
+
+---
+
+## E2E User Experience Test Requirements (CRITICAL)
+
+End-to-end tests verify the FULL scraper pipeline from the user's perspective.
+
+### What to Test
+1. **Happy path**: config → authenticate → scrape → transform → validate → envelope output
+2. **Auth failure**: scraper returns `{ success: false }` → error message, cleanup still runs
+3. **Empty data**: scraper returns no courses/assignments → valid empty envelope (warning, not error)
+4. **Network failure**: uploader fails → graceful error, no crash
+5. **Multi-student**: `discoverStudents()` returns multiple → each gets separate scrape/transform cycle
+
+### Test Structure
+```typescript
+describe('E2E: Canvas scraper pipeline', () => {
+  it('should produce a valid envelope from a full Canvas extract', async () => {
+    // 1. Create mock scraper with realistic test data
+    // 2. Run full lifecycle via scraper.run(config)
+    // 3. Validate envelope with validateEnvelope()
+    // 4. Assert entity counts match expected
+    // 5. Assert all ops have correct key fields
+  });
+
+  it('should handle auth failure gracefully', async () => {
+    // 1. Create scraper that fails auth
+    // 2. Assert run() rejects with auth error
+    // 3. Assert cleanup() was still called
+  });
+});
+```
+
+### E2E Safety Rules
+- NEVER launch a real browser in E2E tests
+- NEVER hit real school portal URLs
+- NEVER call real Scholaracle API — mock uploader
+- DO validate envelopes with the real `validateEnvelope()` function
+- DO use realistic test data (see existing `canvas-transformer.test.ts` for reference)
+
+---
+
+## Safety Rails
+- Never delete/refactor/optimize without OK
+- Preserve comments & existing style
+- Assume code has purpose
+- Present simpler alternative with confidence (1-10) before edits
+- Never call paid AI APIs (OpenAI, Anthropic) in tests—mock `AiClient`
+- Never launch real Playwright browsers in unit/integration tests
+- Never hit real school portals or the real Scholaracle API in tests
+- Never commit `.env`, credentials, or connector tokens
+
+## Self-Check
+```
+[ ] Tests written FIRST (TDD — M1)
+[ ] No placeholder code
+[ ] Edge cases handled (empty data, missing fields, auth failure)
+[ ] Interfaces are small and focused (ISP — M2)
+[ ] Three-file scraper pattern followed (M3)
+[ ] TransformContext used, no hardcoded keys (M4)
+[ ] Envelope validated before upload (M5)
+[ ] Extends BaseScraper with full lifecycle (M6)
+[ ] Credentials from config/env only (M7)
+[ ] Types from src/core/types.ts (M8)
+[ ] Factory helpers in tests (M9)
+[ ] No real browser/portal/API calls in tests
+[ ] STRICT mode honored
+```
+
+## Quick Reference
+```bash
+# Development
+npm run dev                 # ts-node CLI (dev mode)
+npm run build               # tsc --build
+npm run type-check          # TypeScript noEmit check
+
+# Testing
+npm test                    # Jest (all tests)
+npm run test:coverage       # Jest with coverage report
+
+# Quality
+npm run lint                # ESLint
+npm run lint:fix            # ESLint with auto-fix
+npm run format              # Prettier
+npm run format:check        # Prettier check only
+
+# CLI usage (after build)
+npx scholaracle-scraper setup
+npx scholaracle-scraper run canvas
+npx scholaracle-scraper validate canvas
+npx scholaracle-scraper generate
+npx scholaracle-scraper schedule
+npx scholaracle-scraper troubleshoot
+```
+
+## Modular Code Structure
+
+### Size Thresholds
+
+| Metric | Limit | Rationale |
+|--------|-------|-----------|
+| **File Length** | 300 lines max | Scrapers have verbose selectors |
+| **Function** | 50 lines max | Single responsibility |
+| **Transformer** | 250 lines max | Per-platform data mapping |
+| **Scraper class** | 200 lines max | Browser automation only |
+| **Parameters** | 6 max | Use typed objects (`TransformContext`, `IScraperConfig`) |
+| **Nesting Depth** | 3 levels max | Extract helpers |
+
+### When Limits Are Exceeded
+```
+If Transformer > 250 lines:
+  → Split by entity type (e.g., transformCourses(), transformAssignments())
+  → Keep the main export as a thin orchestrator
+
+If Scraper > 200 lines:
+  → Extract page-object helpers (e.g., loginPage.fill(), gradesPage.extract())
+  → Keep lifecycle methods thin
+
+If Function > 50 lines:
+  → Extract helper functions
+  → Pure helpers are easier to test (M1)
+```
+
+## Violation Response
+When violation detected:
+1. REJECT with mandate number (M1-M9)
+2. Show bad code vs good code
+3. Reference relevant file
+4. Provide fix instruction
+
+## Documentation Reference
+- `README.md` — Project overview, CLI usage, quick start
+- `docs/` — Platform guides, data extraction checklist, envelope format
+- `prompts/` — AI prompt templates for scraper generation/troubleshooting
+- `prompts/context/scraper-spec-context.md` — Full specification context
+- `src/scrapers/_template/` — Template for creating new scrapers
+- `src/core/types.ts` — Source of truth for all entity types and envelope schema
+
+ROLE: engineer STRICT=true

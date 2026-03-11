@@ -1,0 +1,15 @@
+{
+  "id": "PLATFORM_ID",
+  "name": "Platform Name",
+  "version": "1.0.0",
+  "description": "Scrapes student data from Platform Name",
+  "platforms": ["*.platform.com"],
+  "capabilities": {
+    "grades": true,
+    "assignments": true,
+    "attendance": false,
+    "schedule": false,
+    "messages": false,
+    "documents": false
+  }
+}
