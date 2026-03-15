@@ -25,11 +25,15 @@ import { useStrategy, computeFingerprint } from '../../core/strategy-store';
 
 const CLASS_DESC_REGEX = /<table\s+id="classDesc_(\d+_\d+_\d+_\d+)"[^>]*>(.*?)<\/table>/gs;
 
+/** Grade period literals in priority order (most recent school term first). */
+const GRADE_PERIOD_PRIORITY = ['4TH', 'PR4', '3RD', 'PR3', '2ND', 'PR2', '1ST', 'PR1'];
+
 function parseCoursesFromHtml(html: string, tableRegex: RegExp): ISkywardCourseExtract[] {
   const courses: ISkywardCourseExtract[] = [];
   let match;
   const regex = new RegExp(tableRegex.source, 'gs');
   while ((match = regex.exec(html)) !== null) {
+    const sectionId = match[1]; // e.g. "111217_29457_0_02"
     const content = match[2];
     const nameM = content?.match(/class="bld classDesc"><a[^>]*>([^<]+)<\/a>/);
     const periodM = content?.match(/Period<\/label>\s*(\d+[A-Z]?)/);
@@ -40,6 +44,9 @@ function parseCoursesFromHtml(html: string, tableRegex: RegExp): ISkywardCourseE
       teacherMs.length > 0
         ? [...teacherMs].reverse().find((m) => m[1]!.trim() !== name && m[1]!.trim().length > 2)?.[1]?.trim() ?? ''
         : '';
+    // Extract course number ID (cni) from the section ID (e.g. "111217_29457_0_02" → "29457")
+    const cniParts = sectionId?.split('_');
+    const courseCni = cniParts && cniParts.length >= 2 ? cniParts[1] : undefined;
     courses.push({
       name,
       period: periodM?.[1] ?? '?',
@@ -47,6 +54,7 @@ function parseCoursesFromHtml(html: string, tableRegex: RegExp): ISkywardCourseE
       teacher,
       currentGrade: '',
       grades: {},
+      _cni: courseCni,
     });
   }
   return courses;
@@ -218,6 +226,23 @@ export class SkywardScraper extends BaseScraper {
   // -------------------------------------------------------------------------
   // Private: Navigation
   // -------------------------------------------------------------------------
+
+  /** Dismiss all visible Skyward dialogs by clicking close buttons or pressing Escape. */
+  private async dismissAllDialogs(page: Page): Promise<void> {
+    // Try up to 3 times in case multiple dialogs are stacked
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const visibleDialog = page.locator('.sf_DialogWrap:visible').first();
+      if ((await visibleDialog.count()) === 0) break;
+      // Try clicking the close button (small X icon)
+      const closeBtn = page.locator('.sf_DialogWrap:visible .sf_DialogClose, .sf_DialogWrap:visible a[title="Close"]').first();
+      if ((await closeBtn.count()) > 0) {
+        await closeBtn.click({ timeout: 2000 }).catch(() => {});
+      } else {
+        await page.keyboard.press('Escape');
+      }
+      await page.waitForTimeout(500);
+    }
+  }
 
   private async navigateTo(page: Page, linkText: string): Promise<boolean> {
     try {
@@ -393,6 +418,10 @@ export class SkywardScraper extends BaseScraper {
       }
     }
 
+    // Dismiss ALL Skyward dialogs — they overlay the gradebook and intercept clicks.
+    // Skyward dialogs use .sf_DialogWrap with close buttons having class sf_DialogClose.
+    await this.dismissAllDialogs(page);
+
     const allAssignments: ISkywardAssignmentExtract[] = [];
     for (const course of courses) {
       const courseAssignments = await this.extractAssignmentsForCourse(page, course, html2);
@@ -464,31 +493,132 @@ export class SkywardScraper extends BaseScraper {
     return results;
   }
 
+  /**
+   * Extracts assignments for a course by clicking the grade cell in the gradebook grid,
+   * which opens a gradeInfoDialog with full assignment details including categories and weights.
+   */
   private async extractAssignmentsForCourse(
     page: Page,
     course: ISkywardCourseExtract,
-    currentHtml: string,
+    _currentHtml: string,
   ): Promise<ISkywardAssignmentExtract[]> {
-    const courseLink = page.locator(`a:has-text("${course.name}")`).first();
-
-    if ((await courseLink.count()) === 0) {
-      return this.parseAssignmentTableFromHtml(currentHtml, course.name, course.period);
+    if (!course._cni) {
+      return [];
     }
 
     try {
-      await courseLink.click({ timeout: 5000 });
+      // Dismiss any overlay dialog that might intercept the click
+      await this.dismissAllDialogs(page);
+
+      // Find the grade cell for the most current grading period
+      let gradeCell = null;
+      for (const period of GRADE_PERIOD_PRIORITY) {
+        const cell = page.locator(`a#showGradeInfo[data-cni="${course._cni}"][data-lit="${period}"]`).first();
+        if ((await cell.count()) > 0) {
+          gradeCell = cell;
+          break;
+        }
+      }
+
+      if (!gradeCell) {
+        // Fallback: try any grade cell for this course
+        gradeCell = page.locator(`a#showGradeInfo[data-cni="${course._cni}"]`).last();
+        if ((await gradeCell.count()) === 0) {
+          return [];
+        }
+      }
+
+      await gradeCell.click({ timeout: 5000 });
       await page.waitForTimeout(2000);
-      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
 
-      const detailHtml = await page.content();
-      const assignments = this.parseAssignmentTableFromHtml(detailHtml, course.name, course.period);
+      // Parse assignments from the gradeInfoDialog
+      const assignments = await page.evaluate(({ courseName, coursePeriod }: { courseName: string; coursePeriod: string }) => {
+        const dialog = document.querySelector('#gradeInfoDialog');
+        if (!dialog) return [];
 
-      await this.navigateTo(page, 'Gradebook');
-      await page.waitForTimeout(1000);
+        const results: Array<{
+          title: string; course: string; period: string; category: string;
+          dueDate: string; pointsEarned: string; pointsPossible: string;
+          grade: string; status: 'graded' | 'missing' | 'late' | 'unknown';
+        }> = [];
+
+        // Find the assignment table (has "Due" and "Assignment" columns)
+        const tables = dialog.querySelectorAll('table');
+        let assignTable: Element | null = null;
+        for (const t of tables) {
+          const headerRow = t.querySelector('tr');
+          const headerText = headerRow?.textContent ?? '';
+          if (headerText.includes('Assignment') && (headerText.includes('Due') || headerText.includes('Score'))) {
+            assignTable = t;
+            break;
+          }
+        }
+
+        if (!assignTable) return results;
+
+        let currentCategory = '';
+        let currentWeight = '';
+
+        const rows = assignTable.querySelectorAll('tr');
+        for (const row of rows) {
+          const text = row.textContent?.trim().replace(/\s+/g, ' ') ?? '';
+
+          // Category header row: "Major weighted at 40.00% 85 85.47 ..."
+          if (text.includes('weighted at')) {
+            const catMatch = text.match(/^(\S+)\s*weighted at\s*([\d.]+)%/);
+            if (catMatch) {
+              currentCategory = catMatch[1]!;
+              currentWeight = catMatch[2]!;
+            }
+            continue;
+          }
+
+          // Assignment row — cells: Due, Assignment, Grade, Score(%), Points Earned, Missing, NoCount, Absent
+          const cells = row.querySelectorAll('td');
+          if (cells.length >= 5) {
+            const due = cells[0]?.textContent?.trim() ?? '';
+            const title = cells[1]?.textContent?.trim() ?? '';
+            const grade = cells[2]?.textContent?.trim() ?? '';
+            const pointsRaw = cells[4]?.textContent?.trim() ?? '';
+            const missingCell = cells[5]?.textContent?.trim() ?? '';
+            const hasMissingImg = cells[5]?.querySelector('img') !== null;
+
+            if (!title || title === 'Assignment' || title.includes('weighted at')) continue;
+
+            // Parse "142 out of 200" → pointsEarned="142", pointsPossible="200"
+            const ptsMatch = pointsRaw.match(/([\d.]+)\s*out of\s*([\d.]+)/);
+            const pointsEarned = ptsMatch ? ptsMatch[1]! : '';
+            const pointsPossible = ptsMatch ? ptsMatch[2]! : '';
+
+            const isMissing = missingCell === 'M' || hasMissingImg;
+            const status: 'graded' | 'missing' | 'late' | 'unknown' =
+              isMissing ? 'missing' : (grade && /^\d/.test(grade) ? 'graded' : 'unknown');
+
+            results.push({
+              title,
+              course: courseName,
+              period: coursePeriod,
+              category: currentCategory,
+              dueDate: due,
+              pointsEarned,
+              pointsPossible,
+              grade,
+              status,
+            });
+          }
+        }
+
+        return results;
+      }, { courseName: course.name, coursePeriod: course.period });
+
+      // Close the gradeInfoDialog
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
 
       return assignments;
     } catch (err) {
-      console.warn(`[SkywardScraper] Failed to extract assignments for ${course.name}:`, err);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[SkywardScraper] Failed to extract assignments for ${course.name}: ${msg}`);
       return [];
     }
   }
