@@ -156,9 +156,32 @@ describe('transformSkywardExtract', () => {
     expect(rec.status).toBe('graded');
     expect(rec.pointsEarned).toBe(95);
     expect(rec.pointsPossible).toBe(100);
+    expect(rec.category).toBe('Major');
     expect(rec.dueAt).toBe('2026-02-10');
     expect(rec.termExternalId).toBeDefined();
     expect((rec.termExternalId as string).startsWith('skyward-term-')).toBe(true);
+  });
+
+  it('should use content-based IDs for missing assignments (not index-based)', () => {
+    const ops = transformSkywardExtract(makeExtract({ assignments: [] }), ctx);
+    const missing = ops.filter(
+      (o) => o.entity === 'assignment' && (o.record as Record<string, unknown>).status === 'missing'
+    );
+    expect(missing).toHaveLength(1);
+    const key = missing[0]!.key as { externalId: string };
+    expect(key.externalId).toContain('chapter-5-homework');
+    expect(key.externalId).toContain('3');
+    expect(key.externalId).not.toMatch(/skyward-missing-\d+$/);
+  });
+
+  it('should use content-based IDs for attendance events (not index-based)', () => {
+    const ops = transformSkywardExtract(makeExtract(), ctx);
+    const events = ops.filter((o) => o.entity === 'attendanceEvent');
+    expect(events).toHaveLength(1);
+    const key = events[0]!.key as { externalId: string };
+    expect(key.externalId).toContain('2026-01-07');
+    expect(key.externalId).toContain('3');
+    expect(key.externalId).not.toMatch(/skyward-attendance-\d+$/);
   });
 
   it('should create attendanceEvent ops from attendance', () => {
