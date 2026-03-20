@@ -163,9 +163,12 @@ export class CanvasScraper extends BaseScraper {
     await page.fill('input[type="email"], input[name="identifier"]', email);
     await page.click('button:has-text("Next"), #identifierNext button');
 
-    await page.waitForSelector('input[type="password"], input[name="password"]', { timeout: 10000 });
-    await page.fill('input[type="password"], input[name="password"]', password);
-    await page.click('button:has-text("Next"), #passwordNext button');
+    // Google SSO shows password field only after email step completes.
+    // Wait for visible password input (not the hidden one in the DOM).
+    const passLocator = page.locator('input[type="password"]:visible, input[name="Passwd"]:visible');
+    await passLocator.waitFor({ state: 'visible', timeout: 15000 });
+    await passLocator.fill(password);
+    await page.click('#passwordNext button, button:has-text("Next")');
 
     await page.waitForURL((url) => !url.hostname.includes('accounts.google.com'), { timeout: 30000 });
   }
