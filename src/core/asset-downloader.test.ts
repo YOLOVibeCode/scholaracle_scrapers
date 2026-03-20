@@ -2,7 +2,7 @@ import { rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { downloadAssets } from './asset-downloader';
-import type { IAssetDescriptor } from './types';
+import type { IAssetDescriptor } from './scraper-types';
 
 function makeDescriptor(overrides: Partial<IAssetDescriptor> = {}): IAssetDescriptor {
   return {

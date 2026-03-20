@@ -1,10 +1,6 @@
 import { BaseScraper } from './base-scraper';
-import type {
-  IScraperConfig,
-  IScraperMetadata,
-  ISlcDeltaOp,
-  ISlcIngestEnvelopeV1,
-} from './types';
+import type { ISlcDeltaOp, ISlcIngestEnvelopeV1 } from '@scholaracle/contracts';
+import type { IScraperConfig, IScraperMetadata } from './scraper-types';
 
 // ---------------------------------------------------------------------------
 // Concrete test implementation of BaseScraper

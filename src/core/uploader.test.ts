@@ -2,7 +2,7 @@ import { ScholaracleUploader } from './uploader';
 import {
   SLC_INGEST_SCHEMA_VERSION_V1,
   type ISlcIngestEnvelopeV1,
-} from './types';
+} from '@scholaracle/contracts';
 
 function makeEnvelope(runId = 'run-1'): ISlcIngestEnvelopeV1 {
   return {

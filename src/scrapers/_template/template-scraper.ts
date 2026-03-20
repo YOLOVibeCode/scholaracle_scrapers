@@ -15,7 +15,8 @@
 
 import { chromium, type Page, type Browser } from 'playwright';
 import { BaseScraper } from '../../core/base-scraper';
-import type { IScraperConfig, IScraperMetadata, ISlcDeltaOp } from '../../core/types';
+import type { ISlcDeltaOp } from '@scholaracle/contracts';
+import type { IScraperConfig, IScraperMetadata } from '../../core/scraper-types';
 import metadata from './metadata.json';
 
 // ---------------------------------------------------------------------------

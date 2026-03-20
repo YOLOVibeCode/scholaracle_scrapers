@@ -1,6 +1,6 @@
 import type { IReconciledGrade } from './grade-reconciler';
 import type { ITrend } from './grade-history';
-import type { ISlcDeltaOp } from './types';
+import type { ISlcDeltaOp } from '@scholaracle/contracts';
 
 const MAJOR_POINTS_THRESHOLD = 50;
 const RISK_ORDER: Record<string, number> = { critical: 0, high: 1, moderate: 2, low: 3 };
