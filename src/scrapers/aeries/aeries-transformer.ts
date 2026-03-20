@@ -1,4 +1,4 @@
-import type { ISlcDeltaOp } from '../../core/types';
+import type { ISlcDeltaOp } from '@scholaracle/contracts';
 
 // ---------------------------------------------------------------------------
 // Raw Aeries extract types (output of the Playwright scrape phase)

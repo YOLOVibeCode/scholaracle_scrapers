@@ -9,7 +9,7 @@ import {
   createMockContext,
   createMockBrowser,
 } from '../__mocks__/playwright-mock';
-import type { IScraperConfig } from '../../core/types';
+import type { IScraperConfig } from '../../core/scraper-types';
 
 jest.mock('playwright');
 

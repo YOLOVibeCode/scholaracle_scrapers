@@ -4,7 +4,7 @@ import {
   type SlcEntityType,
   type ISlcDeltaOp,
   type ISlcIngestEnvelopeV1,
-} from './types';
+} from '@scholaracle/contracts';
 
 // ---------------------------------------------------------------------------
 // Validation result types

@@ -2,8 +2,8 @@
   "name": "scholaracle-scraper",
   "version": "0.1.0",
   "description": "Scholaracle Scraper Library — AI-powered scrapers for educational platforms",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "bin": {
     "scholaracle-scraper": "dist/bin/cli.js"
   },
@@ -20,6 +20,7 @@
     "clean": "rm -rf dist coverage *.tsbuildinfo"
   },
   "dependencies": {
+    "@scholaracle/contracts": "file:../scholarmancy/scholaracle/packages/contracts",
     "@anthropic-ai/sdk": "^0.74.0",
     "@google/generative-ai": "^0.24.0",
     "axios": "^1.7.0",

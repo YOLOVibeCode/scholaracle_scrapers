@@ -8,7 +8,7 @@ import type {
   IAssetDescriptor,
   IAssetManifestEntry,
   IDownloadResult,
-} from './types';
+} from './scraper-types';
 
 const DEFAULT_MAX_CONCURRENT = 5;
 const DEFAULT_SIZE_LIMIT_BYTES = 100 * 1024 * 1024; // 100MB

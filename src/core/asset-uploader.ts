@@ -1,7 +1,7 @@
 import axios, { type AxiosInstance } from 'axios';
 import FormData from 'form-data';
 import { createReadStream } from 'node:fs';
-import type { IAssetDescriptor, IDownloadResult, IUploadedAsset } from './types';
+import type { IAssetDescriptor, IDownloadResult, IUploadedAsset } from './scraper-types';
 
 export interface IAssetUploaderOptions {
   readonly sourceId: string;

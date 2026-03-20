@@ -27,6 +27,7 @@ program
   .option('--scheduled', 'Run in non-interactive mode (for scheduled runs)')
   .option('--silent', 'Suppress terminal output, log to file only')
   .option('--no-upload', 'Scrape and validate only, do not upload')
+  .option('--headed', 'Run with visible browser (default: headless)')
   .option('--skip-assets', 'Do not download or upload assets (keep portal URLs)')
   .option('--max-downloads <n>', 'Max concurrent asset downloads (default: 5)', '5')
   .action((platform: string | undefined, cmd: { opts: () => IRunOptions }) =>

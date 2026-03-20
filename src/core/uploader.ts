@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance } from 'axios';
-import type { ISlcIngestEnvelopeV1 } from './types';
+import type { ISlcIngestEnvelopeV1 } from '@scholaracle/contracts';
 
 // ---------------------------------------------------------------------------
 // Result types

@@ -1,4 +1,4 @@
-import type { ISlcDeltaOp } from '../../core/types';
+import type { ISlcDeltaOp } from '@scholaracle/contracts';
 
 // ---------------------------------------------------------------------------
 // LDISD 2025-2026 grading periods (Texas 6-weeks; used for termExternalId and expiration)

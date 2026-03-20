@@ -3,7 +3,7 @@ import {
   SLC_INGEST_SCHEMA_VERSION_V1,
   type ISlcIngestEnvelopeV1,
   type ISlcDeltaOp,
-} from './types';
+} from '@scholaracle/contracts';
 
 function makeValidEnvelope(ops: ISlcDeltaOp[] = []): ISlcIngestEnvelopeV1 {
   return {
