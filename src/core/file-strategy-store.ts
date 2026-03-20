@@ -4,7 +4,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
-import type { IExtractionStrategy, IStrategyStore } from './strategy-store';
+import type { IExtractionStrategy, IStrategyStore } from '@scholaracle/contracts';
 
 const STRATEGIES_DIR = 'strategies';
 

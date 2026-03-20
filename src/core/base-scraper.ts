@@ -1,16 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import {
   SLC_INGEST_SCHEMA_VERSION_V1,
-  type IDiscoveredStudent,
-  type IScraperConfig,
-  type IScraperMetadata,
   type ISlcDeltaOp,
   type ISlcIngestEnvelopeV1,
-  type ScraperPhase,
-  type ScraperProgressCallback,
-} from './types';
+  type IStrategyStore,
+} from '@scholaracle/contracts';
+import type {
+  IDiscoveredStudent,
+  IScraperConfig,
+  IScraperMetadata,
+  ScraperPhase,
+  ScraperProgressCallback,
+} from './scraper-types';
 import { processAssets } from './asset-manager';
-import type { IStrategyStore } from './strategy-store';
 
 /**
  * Abstract base class for all Scholaracle scrapers.

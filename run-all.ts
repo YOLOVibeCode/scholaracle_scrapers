@@ -122,7 +122,7 @@ function parseArgs(): ICliArgs {
   }
   return {
     upload: args.includes('--upload'),
-    headless: args.includes('--headless'),
+    headless: !args.includes('--headed'),
     skipAi: args.includes('--skip-ai'),
     skipDownloads: args.includes('--skip-downloads'),
     studentFilter,

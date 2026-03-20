@@ -7,7 +7,7 @@ import {
 } from './student-insights';
 import type { IReconciledGrade } from './grade-reconciler';
 import type { ITrend } from './grade-history';
-import type { ISlcDeltaOp } from './types';
+import type { ISlcDeltaOp } from '@scholaracle/contracts';
 
 function makeGrade(overrides: Partial<IReconciledGrade> & { courseName: string }): IReconciledGrade {
   return {

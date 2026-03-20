@@ -2,7 +2,8 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { processAssets } from './asset-manager';
-import type { ISlcDeltaOp, IScraperConfig } from './types';
+import type { ISlcDeltaOp } from '@scholaracle/contracts';
+import type { IScraperConfig } from './scraper-types';
 
 jest.mock('./asset-downloader', () => ({
   downloadAssets: jest.fn(),

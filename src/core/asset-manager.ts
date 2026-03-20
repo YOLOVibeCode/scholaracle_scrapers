@@ -2,15 +2,17 @@ import { rm } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type {
-  IAssetDescriptor,
-  IAssetManifestEntry,
   ISlcAssignment,
   ISlcAttachment,
   ISlcCourseMaterial,
   ISlcDeltaOp,
   ISlcMessage,
+} from '@scholaracle/contracts';
+import type {
+  IAssetDescriptor,
+  IAssetManifestEntry,
   IScraperConfig,
-} from './types';
+} from './scraper-types';
 import { AssetManifest } from './asset-manifest';
 import { downloadAssets } from './asset-downloader';
 import { AssetUploader } from './asset-uploader';

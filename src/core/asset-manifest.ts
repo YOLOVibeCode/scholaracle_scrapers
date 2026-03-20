@@ -1,7 +1,7 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import type { IAssetManifest, IAssetManifestEntry } from './types';
+import type { IAssetManifest, IAssetManifestEntry } from './scraper-types';
 
 /** Default directory for per-source manifests. */
 const DEFAULT_MANIFESTS_DIR = join(homedir(), '.scholaracle-scraper', 'manifests');

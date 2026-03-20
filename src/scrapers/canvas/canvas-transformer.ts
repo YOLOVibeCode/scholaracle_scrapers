@@ -1,4 +1,4 @@
-import type { ISlcDeltaOp } from '../../core/types';
+import type { ISlcDeltaOp } from '@scholaracle/contracts';
 
 // ---------------------------------------------------------------------------
 // Semester inference from due date (Aug–Dec = fall, Jan–May = spring) for termExternalId

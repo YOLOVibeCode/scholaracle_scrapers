@@ -5,7 +5,7 @@ import {
   type ICourseMatch,
   type IMatchCoursesOptions,
 } from './grade-reconciler';
-import type { ISlcDeltaOp } from './types';
+import type { ISlcDeltaOp } from '@scholaracle/contracts';
 
 function makeGradeOp(overrides: {
   provider: string;
