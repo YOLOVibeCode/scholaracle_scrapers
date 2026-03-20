@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import axios from 'axios';
 import { AssetUploader } from './asset-uploader';
-import type { IAssetDescriptor, IDownloadResult } from './types';
+import type { IAssetDescriptor, IDownloadResult } from './scraper-types';
 
 jest.mock('axios');
 

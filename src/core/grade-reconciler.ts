@@ -1,4 +1,4 @@
-import type { ISlcDeltaOp } from './types';
+import type { ISlcDeltaOp } from '@scholaracle/contracts';
 
 const DISCREPANCY_THRESHOLD = 15;
 

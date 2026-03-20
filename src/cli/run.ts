@@ -7,12 +7,13 @@ import { validateEnvelope } from '../core/validator';
 import { BaseScraper } from '../core/base-scraper';
 import { FileStrategyStore } from '../core/file-strategy-store';
 import { resolveProfileRunIds, resolveManualRunIds } from './run-ids';
-import type { IScraperConfig } from '../core/types';
+import type { IScraperConfig } from '../core/scraper-types';
 
 export interface IRunOptions {
   readonly scheduled?: boolean;
   readonly silent?: boolean;
   readonly upload?: boolean;
+  readonly headed?: boolean;
   readonly profileId?: string;
   readonly configDir?: string;
   readonly skipAssets?: boolean;
@@ -111,7 +112,7 @@ export async function runCommand(
         provider: resolvedPlatform,
         adapterId: scraper.metadata.id,
         options: {
-          headless: true,
+          headless: !options?.headed,
           skipDownloads: skipAssets,
           ...(maxDownloads != null && !isNaN(maxDownloads) ? { maxConcurrentDownloads: maxDownloads } : {}),
         },
