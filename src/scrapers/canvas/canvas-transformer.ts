@@ -80,24 +80,40 @@ export interface ICanvasBrowserCourse {
 }
 
 export interface ICanvasBrowserFile {
+  id?: string;
   name: string;
   url?: string;
   size?: string;
   contentType?: string;
   localPath?: string;
+  /** Base64-encoded image content for vision analysis (populated for small image files). */
+  contentBase64?: string;
+  /** AI-generated description of the image content. */
+  contentDescription?: string;
 }
 
 export interface ICanvasBrowserAssignment {
+  id?: string;
   name: string;
   dueDate?: string;
   points?: string;
   status?: string;
+  description?: string;
   attachments?: ICanvasBrowserFile[];
 }
 
+export interface ICanvasModuleItem {
+  title: string;
+  type: 'Assignment' | 'File' | 'Page' | 'Discussion' | 'ExternalUrl' | 'ExternalTool' | 'SubHeader';
+  contentId?: string;
+  position: number;
+}
+
 export interface ICanvasBrowserModule {
+  id?: string;
   name: string;
-  items: string[];
+  position?: number;
+  items: ICanvasModuleItem[];
 }
 
 export interface ICanvasBrowserToDoItem {
@@ -156,6 +172,109 @@ function normalizeStatus(raw: string | undefined): string | undefined {
   if (lower.includes('grad')) return 'graded';
   if (lower.includes('excus')) return 'excused';
   return 'unknown';
+}
+
+// ---------------------------------------------------------------------------
+// Material-to-Assignment matching (Layers 1 + 2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Match course files to assignments using two deterministic signals:
+ *   Layer 1 — Canvas module structure (teacher-curated grouping)
+ *   Layer 2 — File links in assignment descriptions
+ *
+ * Returns a Map from file name → assignment array index (as string).
+ */
+export function matchMaterialsToAssignments(
+  course: ICanvasBrowserCourse,
+): Map<string, string> {
+  const fileToAssignment = new Map<string, string>();
+
+  // Lookup: Canvas file ID → file name
+  const fileIdToName = new Map<string, string>();
+  for (const f of course.files) {
+    if (f.id) fileIdToName.set(f.id, f.name);
+  }
+
+  // Lookup: Canvas assignment ID → assignment array index
+  const assignmentIdToIndex = new Map<string, number>();
+  for (let i = 0; i < course.assignments.length; i++) {
+    const a = course.assignments[i]!;
+    if (a.id) assignmentIdToIndex.set(a.id, i);
+  }
+
+  // --- Layer 1: Module co-occurrence ---
+  for (const mod of course.modules) {
+    const moduleAssignmentIds: string[] = [];
+    const moduleFileIds: string[] = [];
+
+    for (const item of mod.items) {
+      if (item.type === 'Assignment' && item.contentId) {
+        moduleAssignmentIds.push(item.contentId);
+      }
+      if (item.type === 'File' && item.contentId) {
+        moduleFileIds.push(item.contentId);
+      }
+    }
+
+    if (moduleFileIds.length === 0) continue;
+
+    if (moduleAssignmentIds.length === 1) {
+      // Single assignment in module → all files belong to it
+      const idx = assignmentIdToIndex.get(moduleAssignmentIds[0]!);
+      if (idx !== undefined) {
+        for (const fid of moduleFileIds) {
+          const fname = fileIdToName.get(fid);
+          if (fname && !fileToAssignment.has(fname)) {
+            fileToAssignment.set(fname, String(idx));
+          }
+        }
+      }
+    } else if (moduleAssignmentIds.length > 1) {
+      // Multiple assignments → assign files to nearest preceding assignment by position
+      const sorted = [...mod.items].sort((a, b) => a.position - b.position);
+      let currentIdx: number | undefined;
+      for (const item of sorted) {
+        if (item.type === 'Assignment' && item.contentId) {
+          currentIdx = assignmentIdToIndex.get(item.contentId);
+        } else if (item.type === 'File' && item.contentId && currentIdx !== undefined) {
+          const fname = fileIdToName.get(item.contentId);
+          if (fname && !fileToAssignment.has(fname)) {
+            fileToAssignment.set(fname, String(currentIdx));
+          }
+        }
+      }
+    }
+  }
+
+  // --- Layer 2: Assignment description link extraction ---
+  for (let i = 0; i < course.assignments.length; i++) {
+    const a = course.assignments[i]!;
+    if (!a.description) continue;
+
+    // Match Canvas file URLs: /files/{fileId}
+    const fileIdPattern = /\/files\/(\d+)/g;
+    let match: RegExpExecArray | null;
+    while ((match = fileIdPattern.exec(a.description)) !== null) {
+      const fileId = match[1]!;
+      const fname = fileIdToName.get(fileId);
+      if (fname && !fileToAssignment.has(fname)) {
+        fileToAssignment.set(fname, String(i));
+      }
+    }
+
+    // Match by filename mentioned verbatim in description
+    for (const file of course.files) {
+      const nameNoExt = file.name.replace(/\.[^.]+$/, '');
+      if (nameNoExt.length >= 4 && a.description.includes(file.name)) {
+        if (!fileToAssignment.has(file.name)) {
+          fileToAssignment.set(file.name, String(i));
+        }
+      }
+    }
+  }
+
+  return fileToAssignment;
 }
 
 export function transformCanvasExtract(
@@ -289,7 +408,15 @@ export function transformCanvasExtract(
       });
     }
 
+    // Match course files to assignments via modules + description links
+    const materialMatches = matchMaterialsToAssignments(course);
+
     for (const file of course.files) {
+      const matchedIdx = materialMatches.get(file.name);
+      const assignmentExternalId = matchedIdx !== undefined
+        ? `canvas-${course.id}-assignment-${matchedIdx}`
+        : undefined;
+
       ops.push({
         op: 'upsert',
         entity: 'courseMaterial',
@@ -298,10 +425,12 @@ export function transformCanvasExtract(
         record: {
           title: file.name,
           courseExternalId: courseExtId,
+          assignmentExternalId,
           type: 'document' as const,
           url: file.url,
           fileName: file.name,
           mimeType: file.contentType || undefined,
+          extractedText: file.contentDescription || undefined,
         },
       });
     }

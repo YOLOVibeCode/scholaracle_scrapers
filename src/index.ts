@@ -11,6 +11,17 @@ export { ScholaracleUploader } from './core/uploader';
 export { FileStrategyStore } from './core/file-strategy-store';
 export { createScraper, registerScraper, getRegisteredPlatforms } from './core/scraper-registry';
 
+// Notifications (Noctusoft relay)
+export { NoctusoftClient, type IEmailOptions, type ISmsOptions, type ISmsResult } from './core/noctusoft-client';
+export {
+  ScraperNotifier,
+  type INotifierConfig,
+  type IAuthFailureNotification,
+  type IScraperCompleteNotification,
+  type IScraperErrorNotification,
+  type IMissingAssignmentsNotification,
+} from './core/scraper-notifier';
+
 // Scraper-specific types
 export type {
   IScraperConfig,

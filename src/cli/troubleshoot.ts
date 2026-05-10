@@ -3,6 +3,7 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { ScraperConfig } from '../core/config';
 import { AiClient } from '../ai/client';
+import { getHomeDir } from '../core/env';
 
 export async function troubleshootCommand(): Promise<void> {
   console.log('\n  Scholaracle Scraper Troubleshooter (AI-Powered)');
@@ -57,7 +58,7 @@ export async function troubleshootCommand(): Promise<void> {
     }
 
     // Read latest log if available
-    const logDir = join(process.env['HOME'] ?? '~', '.scholaracle-scraper', 'logs');
+    const logDir = join(getHomeDir(), '.scholaracle-scraper', 'logs');
     if (existsSync(logDir)) {
       const logs = readdirSync(logDir)
         .filter(f => f.startsWith(platform))
