@@ -29,15 +29,15 @@ export interface ISmsResult {
  */
 export class NoctusoftClient {
   private readonly apiKey?: string;
-  private readonly emailBaseUrl = 'https://api.sndgrid.us.noctusoft.com';
-  private readonly smsBaseUrl = 'https://api.twilio.us.noctusoft.com';
+  private readonly emailBaseUrl = 'https://api.sendgrid.noctusoft.com';
+  private readonly smsBaseUrl = 'https://api.twilio.noctusoft.com';
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey;
   }
 
   /**
-   * Send email via SendGrid relay.
+   * Send email via SendGrid relay (drop-in replacement for api.sendgrid.com).
    */
   async sendEmail(options: IEmailOptions): Promise<void> {
     const { to, from, subject, text, html, replyTo } = options;
@@ -83,7 +83,7 @@ export class NoctusoftClient {
   }
 
   /**
-   * Send SMS via Twilio relay.
+   * Send SMS via Twilio relay (drop-in replacement for api.twilio.com).
    */
   async sendSms(options: ISmsOptions): Promise<ISmsResult> {
     const { to, body, from = '+15551234567' } = options;

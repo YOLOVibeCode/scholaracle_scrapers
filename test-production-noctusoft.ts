@@ -24,7 +24,7 @@ async function testEmailRelay(): Promise<boolean> {
   try {
     await client.sendEmail({
       to: 'test@example.com',
-      from: 'noreply@apirelay.us.noctusoft.com',
+      from: 'noreply@scholarmancy.com',
       subject: '[Scholaracle Test] Production Email Relay',
       text: `This is a test email from Scholaracle production environment.
 
@@ -81,7 +81,7 @@ async function testScraperNotifier(): Promise<boolean> {
     apiKey,
     notifyEmail: 'admin@example.com',
     notifySms: '+15005550006',
-    fromEmail: 'noreply@apirelay.us.noctusoft.com',
+    fromEmail: 'noreply@scholarmancy.com',
   });
 
   try {
