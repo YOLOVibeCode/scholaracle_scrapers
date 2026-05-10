@@ -199,6 +199,46 @@ npm run build         # Compile to dist/
 npm run dev           # Run CLI in dev mode (ts-node)
 ```
 
+## Notifications (Email & SMS)
+
+The library includes built-in support for **Noctusoft API Relay** — a unified gateway for SendGrid (email), Twilio (SMS), Square (payments), and Google APIs.
+
+### Quick Setup
+
+```bash
+export SSDN_API_KEY=your-api-key
+```
+
+**On Tailscale:** No API key needed! The relay auto-detects Tailscale IPs and injects credentials.
+
+### Send Notifications
+
+```typescript
+import { ScraperNotifier } from '@scholaracle/scrapers';
+
+const notifier = new ScraperNotifier({
+  apiKey: process.env.SSDN_API_KEY,
+  notifyEmail: 'admin@example.com',
+  notifySms: '+15551234567',
+});
+
+// Auth failure alert
+await notifier.notifyAuthFailure({
+  scraper: 'canvas',
+  student: 'Ava Lewis',
+  message: 'Invalid credentials',
+});
+
+// Missing assignments SMS
+await notifier.notifyMissingAssignments({
+  student: 'Ava Lewis',
+  count: 3,
+  courses: ['Math', 'Science'],
+});
+```
+
+See [Noctusoft Integration](docs/NOCTUSOFT_INTEGRATION.md) for full documentation.
+
 ## Documentation
 
 - [Getting Started](docs/GETTING_STARTED.md) — First-time setup walkthrough
@@ -206,6 +246,7 @@ npm run dev           # Run CLI in dev mode (ts-node)
 - [Asset Management](docs/ASSETS.md) — How file downloads, uploads, and pruning work
 - [Envelope Format](docs/ENVELOPE_FORMAT.md) — The `ISlcIngestEnvelopeV1` schema
 - [Troubleshooting](docs/TROUBLESHOOTING.md) — Common issues and the AI troubleshooter
+- [Noctusoft Integration](docs/NOCTUSOFT_INTEGRATION.md) — Email/SMS notifications via API relay
 
 ## License
 

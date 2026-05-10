@@ -11,6 +11,7 @@ import { CanvasScraper } from './src/scrapers/canvas/canvas-scraper';
 import { validateEnvelope } from './src/core/validator';
 import { ScholaracleUploader } from './src/core/uploader';
 import { ScraperConfig } from './src/core/config';
+import { getEnv } from './src/core/env';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import type { IScraperConfig } from './src/core/types';
 
@@ -21,9 +22,9 @@ async function main(): Promise<void> {
   const configMgr = new ScraperConfig();
   const configData = configMgr.load();
 
-  const baseUrl = process.env['CANVAS_BASE_URL'] ?? 'https://ldisd.instructure.com';
-  const username = process.env['CANVAS_USERNAME'] ?? '';
-  const password = process.env['CANVAS_PASSWORD'] ?? '';
+  const baseUrl = getEnv('CANVAS_BASE_URL', 'https://ldisd.instructure.com')!;
+  const username = getEnv('CANVAS_USERNAME', '')!;
+  const password = getEnv('CANVAS_PASSWORD', '')!;
 
   if (!username || !password) {
     console.error('  ✗ Set CANVAS_USERNAME and CANVAS_PASSWORD env vars (or use npx scholaracle-scraper run canvas)');

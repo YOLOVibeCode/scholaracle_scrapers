@@ -7,6 +7,7 @@
 
 import { chromium, type Page, type Browser } from 'playwright';
 import { BaseScraper } from '../../core/base-scraper';
+import { getEnv } from '../../core/env';
 import type { ISlcDeltaOp } from '@scholaracle/contracts';
 import type { IScraperConfig, IScraperMetadata } from '../../core/scraper-types';
 import {
@@ -348,7 +349,7 @@ export class CanvasScraper extends BaseScraper {
       try {
         assignments = await page.evaluate(async (cid: string) => {
           const res = await fetch(
-            `/api/v1/courses/${cid}/assignments?include[]=submission&per_page=200&order_by=due_at`,
+            `/api/v1/courses/${cid}/assignments?include[]=submission&include[]=description&per_page=200&order_by=due_at`,
           );
           if (!res.ok) return [];
           const json = await res.json();
@@ -362,7 +363,7 @@ export class CanvasScraper extends BaseScraper {
               else if (sub['workflow_state'] === 'submitted') status = 'Submitted';
               else if (sub['workflow_state'] === 'unsubmitted') status = 'Unsubmitted';
             }
-            
+
             // Extract attachments from submission
             const attachments = [];
             if (sub && Array.isArray(sub['attachments'])) {
@@ -375,13 +376,15 @@ export class CanvasScraper extends BaseScraper {
                 });
               }
             }
-            
+
             const pts = a['points_possible'];
             return {
+              id: a['id'] ? String(a['id']) : undefined,
               name: (a['name'] as string) || '',
               dueDate: (a['due_at'] as string) || undefined,
               points: pts != null ? `${pts} pts` : undefined,
               status,
+              description: (a['description'] as string) || undefined,
               attachments: attachments.length > 0 ? attachments : undefined,
             };
           }).filter((x: { name: string }) => x.name);
@@ -417,20 +420,27 @@ export class CanvasScraper extends BaseScraper {
         // keep teachers from course list API
       }
 
-      const modules: ICanvasBrowserModule[] = await page.evaluate(() => {
-        const mods: Array<{ name: string; items: string[] }> = [];
-        for (const mod of document.querySelectorAll('.module, [class*="Module"]')) {
-          const nameEl = mod.querySelector('.name, [class*="title"], h3');
-          const name = nameEl?.textContent?.trim() ?? 'Module';
-          const items: string[] = [];
-          for (const item of mod.querySelectorAll('.module_item, [class*="module_item"], .item')) {
-            const t = item.querySelector('a, .title')?.textContent?.trim();
-            if (t) items.push(t);
-          }
-          mods.push({ name, items });
-        }
-        return mods;
-      });
+      let modules: ICanvasBrowserModule[] = [];
+      try {
+        modules = await page.evaluate(async (cid: string) => {
+          const res = await fetch(`/api/v1/courses/${cid}/modules?include[]=items&per_page=200`);
+          if (!res.ok) return [];
+          const json = await res.json();
+          return (Array.isArray(json) ? json : []).map((m: Record<string, unknown>) => ({
+            id: m['id'] ? String(m['id']) : undefined,
+            name: (m['name'] as string) || 'Module',
+            position: (m['position'] as number) || 0,
+            items: (Array.isArray(m['items']) ? m['items'] : []).map((item: Record<string, unknown>) => ({
+              title: (item['title'] as string) || '',
+              type: ((item['type'] as string) || 'Page') as 'Assignment' | 'File' | 'Page' | 'Discussion' | 'ExternalUrl' | 'ExternalTool' | 'SubHeader',
+              contentId: item['content_id'] ? String(item['content_id']) : undefined,
+              position: (item['position'] as number) || 0,
+            })),
+          }));
+        }, course.id);
+      } catch {
+        modules = [];
+      }
 
       let files: ICanvasBrowserFile[] = [];
       try {
@@ -440,6 +450,7 @@ export class CanvasScraper extends BaseScraper {
           const json = await res.json();
           const list = Array.isArray(json) ? json : [];
           return list.map((f: Record<string, unknown>) => ({
+            id: f['id'] ? String(f['id']) : undefined,
             name: (f['display_name'] || f['filename'] || 'file') as string,
             url: ((f['url'] as string) ?? '').replace(/\?.*$/, '').replace(/\/download$/, '') + '/download',
             size: f['size'] ? String(f['size']) : undefined,
@@ -447,6 +458,102 @@ export class CanvasScraper extends BaseScraper {
         }, course.id);
       } catch {
         files = [];
+      }
+
+      // Download small image files as base64 for vision-based content analysis.
+      // Only images < 500KB to keep bandwidth and memory reasonable.
+      const IMAGE_EXTS = /\.(png|jpe?g|webp|gif)$/i;
+      const MAX_IMAGE_SIZE = 500_000; // 500KB
+      for (const file of files) {
+        if (!IMAGE_EXTS.test(file.name)) continue;
+        if (file.size && Number(file.size) > MAX_IMAGE_SIZE) continue;
+        if (!file.url) continue;
+        try {
+          const b64 = await page.evaluate(async (url: string) => {
+            const res = await fetch(url);
+            if (!res.ok) return null;
+            const contentLength = res.headers.get('content-length');
+            if (contentLength && Number(contentLength) > 500_000) return null;
+            const buf = await res.arrayBuffer();
+            if (buf.byteLength > 500_000) return null;
+            const bytes = new Uint8Array(buf);
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]!);
+            return btoa(binary);
+          }, file.url);
+          if (b64) file.contentBase64 = b64;
+        } catch {
+          // Skip silently — image download is best-effort
+        }
+      }
+
+      // Vision analysis: describe downloaded images via Claude Haiku (cheapest model).
+      // One call per image, cached forever as extractedText. Only for files without a name
+      // that's already semantically meaningful.
+      const anthropicKey = getEnv('ANTHROPIC_API_KEY');
+      if (anthropicKey) {
+        const genericNamePattern = /^(\d+|IMG_\d+|screenshot|image|photo)/i;
+        const imagesToDescribe = files.filter(
+          (f) => f.contentBase64 && genericNamePattern.test(f.name)
+        );
+        for (const file of imagesToDescribe) {
+          try {
+            const ext = file.name.split('.').pop()?.toLowerCase() ?? 'png';
+            const mediaType =
+              ext === 'jpg' || ext === 'jpeg'
+                ? 'image/jpeg'
+                : ext === 'webp'
+                  ? 'image/webp'
+                  : ext === 'gif'
+                    ? 'image/gif'
+                    : 'image/png';
+            const res = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: {
+                'content-type': 'application/json',
+                'x-api-key': anthropicKey,
+                'anthropic-version': '2023-06-01',
+              },
+              body: JSON.stringify({
+                model: 'claude-haiku-4-5-20251001',
+                max_tokens: 100,
+                messages: [
+                  {
+                    role: 'user',
+                    content: [
+                      {
+                        type: 'image',
+                        source: {
+                          type: 'base64',
+                          media_type: mediaType,
+                          data: file.contentBase64,
+                        },
+                      },
+                      {
+                        type: 'text',
+                        text: 'Describe this educational material in one sentence. What subject/topic does it cover? Be specific.',
+                      },
+                    ],
+                  },
+                ],
+              }),
+            });
+            if (res.ok) {
+              const json = (await res.json()) as {
+                content: { type: string; text: string }[];
+              };
+              const text = json.content.find((b) => b.type === 'text')?.text;
+              if (text) file.contentDescription = text;
+            }
+          } catch {
+            // Vision analysis is best-effort
+          }
+        }
+      }
+
+      // Clear base64 content to avoid bloating the envelope
+      for (const file of files) {
+        delete file.contentBase64;
       }
 
       return { ...course, teachers, assignments, modules, files };

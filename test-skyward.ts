@@ -11,6 +11,7 @@ import { SkywardScraper } from './src/scrapers/skyward/skyward-scraper';
 import { validateEnvelope } from './src/core/validator';
 import { ScholaracleUploader } from './src/core/uploader';
 import { ScraperConfig } from './src/core/config';
+import { getEnv } from './src/core/env';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import type { IScraperConfig, IScraperProgress } from './src/core/types';
 
@@ -54,11 +55,11 @@ async function main(): Promise<void> {
   const storedCreds = configMgr.getCredentialsById('ldisd-skyward-direct')
     ?? configMgr.getCredentialsById('ldisd-google-sso');
 
-  const baseUrl = process.env['SKYWARD_BASE_URL']
+  const baseUrl = getEnv('SKYWARD_BASE_URL')
     ?? storedCreds?.baseUrl
     ?? 'https://skyward.iscorp.com/scripts/wsisa.dll/WService=wscomlakedallastx/seplog01.w';
-  const username = process.env['SKYWARD_USERNAME'] ?? storedCreds?.username ?? 'Jessica.Lewis';
-  const password = process.env['SKYWARD_PASSWORD'] ?? storedCreds?.password;
+  const username = getEnv('SKYWARD_USERNAME') ?? storedCreds?.username ?? 'Jessica.Lewis';
+  const password = getEnv('SKYWARD_PASSWORD') ?? storedCreds?.password;
 
   if (!password) {
     console.error('\n  ✗ No Skyward password found. Either:');
