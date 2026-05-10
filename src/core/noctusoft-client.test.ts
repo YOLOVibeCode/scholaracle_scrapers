@@ -41,7 +41,7 @@ describe('NoctusoftClient', () => {
       await client.sendEmail(options);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.sndgrid.us.noctusoft.com/v3/mail/send',
+        'https://api.sendgrid.noctusoft.com/v3/mail/send',
         expect.objectContaining({
           method: 'POST',
           headers: {
@@ -163,7 +163,7 @@ describe('NoctusoftClient', () => {
       const result = await client.sendSms(options);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.twilio.us.noctusoft.com/2010-04-01/Accounts/REDACTED/Messages.json',
+        'https://api.twilio.noctusoft.com/2010-04-01/Accounts/REDACTED/Messages.json',
         expect.objectContaining({
           method: 'POST',
           headers: {
