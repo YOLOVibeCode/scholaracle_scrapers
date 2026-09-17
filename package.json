@@ -10,6 +10,7 @@
   "scripts": {
     "build": "tsc --build",
     "dev": "ts-node --transpile-only bin/cli.ts",
+    "acceptance": "ts-node --transpile-only acceptance.ts",
     "test": "jest",
     "test:coverage": "jest --coverage",
     "lint": "eslint src bin --ext .ts",
@@ -21,6 +22,7 @@
   },
   "dependencies": {
     "@scholaracle/contracts": "file:../scholarmancy/scholaracle/packages/contracts",
+    "@scholaracle/scraper-core": "file:../scholarmancy/scholaracle/packages/scraper-core",
     "@anthropic-ai/sdk": "^0.74.0",
     "@google/generative-ai": "^0.24.0",
     "axios": "^1.7.0",

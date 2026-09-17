@@ -1,0 +1,15 @@
+{
+  "sourceId": "skyward-ava-lewis",
+  "minTotalOps": 16,
+  "entities": {
+    "academicTerm": 9,
+    "studentProfile": 1,
+    "course": 6
+  },
+  "recordedAt": "2026-08-12T19:47:17.685Z",
+  "recordedFrom": {
+    "academicTerm": 13,
+    "studentProfile": 1,
+    "course": 8
+  }
+}

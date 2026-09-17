@@ -16,7 +16,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { ScraperConfig, type IScraperProfile, type IStudentProfile } from './src/core/config';
 import { createScraper, isProviderSis } from './src/core/scraper-registry';
-import { validateEnvelope } from './src/core/validator';
+import { validateEnvelope } from '@scholaracle/scraper-core';
 import { ScholaracleUploader } from './src/core/uploader';
 import { reconcileGrades, type IReconciledGrade } from './src/core/grade-reconciler';
 import { AiClient, type AiProvider } from './src/ai/client';

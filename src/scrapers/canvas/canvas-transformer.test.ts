@@ -1,8 +1,8 @@
 import {
   transformCanvasExtract,
   type ICanvasBrowserExtract,
-  type TransformContext,
-} from './canvas-transformer';
+  type ITransformContext as TransformContext,
+} from '@scholaracle/scraper-core';
 
 const ctx: TransformContext = {
   provider: 'canvas',
@@ -31,7 +31,7 @@ function makeExtract(overrides?: Partial<ICanvasBrowserExtract>): ICanvasBrowser
           { name: 'HW 5', dueDate: '2026-03-01T23:59:00Z', points: '100 pts', status: 'Graded' },
           { name: 'Quiz 3', dueDate: '2026-02-28T23:59:00Z', points: '50 pts', status: 'Missing' },
         ],
-        modules: [{ name: 'Unit 5', items: ['5.1 Derivatives', '5.2 Integrals'] }],
+        modules: [{ name: 'Unit 5', items: [{ title: '5.1 Derivatives', type: 'Page' as const, position: 0 }, { title: '5.2 Integrals', type: 'Page' as const, position: 1 }] }],
         files: [{ name: 'study-guide.pdf', url: 'https://canvas.com/files/1/download', size: '1.2 MB' }],
       },
     ],

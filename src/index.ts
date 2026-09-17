@@ -2,7 +2,9 @@
  * Scholaracle Scraper Library — public API.
  *
  * Exports scraper classes, configuration types, and utilities
- * for both CLI and server-side usage.
+ * for local CLI usage on the user's machine. School portal credentials
+ * are held locally (config file or prompted at runtime) — never uploaded
+ * to the server.
  */
 
 // Core

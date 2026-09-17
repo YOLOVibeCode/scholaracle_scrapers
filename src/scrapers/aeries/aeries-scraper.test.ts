@@ -188,7 +188,7 @@ describe('AeriesScraper', () => {
   describe('transform', () => {
     it('delegates to transformAeriesExtract', () => {
       const spy = jest.spyOn(
-        require('./aeries-transformer'),
+        require('@scholaracle/scraper-core'),
         'transformAeriesExtract',
       ) as jest.SpyInstance;
       const scraper = new AeriesScraper();

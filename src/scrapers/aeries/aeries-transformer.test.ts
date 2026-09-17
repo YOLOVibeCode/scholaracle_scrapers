@@ -1,8 +1,8 @@
 import {
   transformAeriesExtract,
   type IAeriesFullExtract,
-  type TransformContext,
-} from './aeries-transformer';
+  type ITransformContext as TransformContext,
+} from '@scholaracle/scraper-core';
 
 const ctx: TransformContext = {
   provider: 'aeries',

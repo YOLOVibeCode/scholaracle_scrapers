@@ -1,0 +1,19 @@
+{
+  "sourceId": "canvas-ava-lewis",
+  "minTotalOps": 17,
+  "entities": {
+    "academicTerm": 1,
+    "studentProfile": 1,
+    "teacher": 2,
+    "course": 1,
+    "assignment": 11
+  },
+  "recordedAt": "2026-08-12T21:20:16.729Z",
+  "recordedFrom": {
+    "academicTerm": 2,
+    "studentProfile": 1,
+    "teacher": 3,
+    "course": 2,
+    "assignment": 15
+  }
+}

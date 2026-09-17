@@ -37,6 +37,8 @@ export interface IRunOptions {
   readonly apiBaseUrl?: string;
   readonly connectorToken?: string;
   readonly onProgress?: ScraperProgressCallback;
+  /** Called with the raw scrape() output before transformation — used for fixture capture. */
+  readonly onRawData?: (rawData: Record<string, unknown>) => void | Promise<void>;
 }
 
 export abstract class BaseScraper {
@@ -126,6 +128,15 @@ export abstract class BaseScraper {
 
       this.emitProgress('scraping', 'Extracting data from portal pages...');
       const rawData = await this.scrape();
+
+      if (runOptions?.onRawData) {
+        try {
+          await runOptions.onRawData(rawData);
+        } catch (captureErr: unknown) {
+          const msg = captureErr instanceof Error ? captureErr.message : String(captureErr);
+          this.emitProgress('scraping', `Raw data capture failed — continuing: ${msg}`);
+        }
+      }
 
       this.emitProgress('transforming', 'Converting raw data to normalized format...');
       let ops = this.transform(rawData);

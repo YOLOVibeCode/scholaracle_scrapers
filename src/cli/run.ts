@@ -3,7 +3,7 @@ import { readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { ScraperConfig } from '../core/config';
 import { ScholaracleUploader } from '../core/uploader';
-import { validateEnvelope } from '../core/validator';
+import { validateEnvelope } from '@scholaracle/scraper-core';
 import { BaseScraper } from '../core/base-scraper';
 import { FileStrategyStore } from '../core/file-strategy-store';
 import { resolveProfileRunIds, resolveManualRunIds } from './run-ids';

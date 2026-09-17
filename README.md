@@ -197,7 +197,35 @@ npm run test:coverage # Tests with coverage report
 npm run type-check    # TypeScript strict mode check
 npm run build         # Compile to dist/
 npm run dev           # Run CLI in dev mode (ts-node)
+npm run acceptance    # Live acceptance runs against real portals (see below)
 ```
+
+### Acceptance runs — real students are the standard
+
+Each student × portal profile in `~/.scholaracle-scraper/config.json` is an
+acceptance profile. `npm run acceptance` runs every profile live against the
+real portal, and each run:
+
+1. **Captures a fixture** — the raw `scrape()` output and validated envelope are
+   saved to `fixtures/<sourceId>/` (gitignored; real student data).
+2. **Judges the result** against `acceptance/<sourceId>.json` — per-entity
+   minimum op counts recorded from a known-good run (counts only, no PII,
+   committed). The first run records the standard automatically at 75% of
+   observed counts; `--record` re-records it after an intentional change.
+3. **Feeds CI** — `src/core/fixture-replay.test.ts` re-runs the transformers
+   over the captured fixtures on every `npm test`, so transformer regressions
+   are caught against real portal data with zero network access.
+
+```bash
+npm run acceptance                  # all profiles
+npm run acceptance -- skyward-ava   # one profile (by id or platform)
+npm run acceptance -- --record      # re-record the standard from this run
+npm run acceptance -- --upload      # also upload passing envelopes
+```
+
+A run fails when the envelope fails validation or any entity count drops below
+the recorded standard — the signature of a portal markup change or extractor
+regression.
 
 ## Notifications (Email & SMS)
 

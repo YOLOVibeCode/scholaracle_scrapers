@@ -8,7 +8,7 @@
  */
 
 import { SkywardScraper } from './src/scrapers/skyward/skyward-scraper';
-import { validateEnvelope } from './src/core/validator';
+import { validateEnvelope } from '@scholaracle/scraper-core';
 import { ScholaracleUploader } from './src/core/uploader';
 import { ScraperConfig } from './src/core/config';
 import { getEnv } from './src/core/env';

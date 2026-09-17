@@ -51,7 +51,7 @@ await client.sendEmail({
 ### Option 2: External (API Key Auth)
 
 ```bash
-export SSDN_API_KEY=nsins_sk_2cdb09ca824242f72103b6bc40ae6bddc3bb70d936027ce2
+export SSDN_API_KEY=***ROTATED-2026-07-18***
 ```
 
 ```typescript
@@ -115,7 +115,7 @@ npm test
 
 **Admin Key (from docs):**
 ```
-nsins_sk_2cdb09ca824242f72103b6bc40ae6bddc3bb70d936027ce2
+***ROTATED-2026-07-18***
 ```
 
 **Request new keys:**
@@ -157,7 +157,7 @@ Your `from` address must use one of these:
 ### Railway
 ```bash
 # Set environment variable
-SSDN_API_KEY=nsins_sk_2cdb09ca824242f72103b6bc40ae6bddc3bb70d936027ce2
+SSDN_API_KEY=***ROTATED-2026-07-18***
 ```
 
 Railway static IPs auto-bind within 24 hours.

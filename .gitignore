@@ -8,6 +8,10 @@ coverage/
 output/
 !output/.gitkeep
 
+# Captured portal fixtures contain real student data (NEVER commit)
+fixtures/*
+!fixtures/README.md
+
 # OS files
 .DS_Store
 Thumbs.db
