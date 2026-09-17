@@ -1,4 +1,4 @@
-import { validateEnvelope, validateOp, type EnvelopeValidationReport } from './validator';
+import { validateEnvelope, validateOp, type IEnvelopeValidationReport as EnvelopeValidationReport } from '@scholaracle/scraper-core';
 import {
   SLC_INGEST_SCHEMA_VERSION_V1,
   type ISlcIngestEnvelopeV1,

@@ -124,7 +124,7 @@ await client.sendEmail({ /* ... */ });
 
 ```bash
 # Railway (Production)
-SSDN_API_KEY=nsins_sk_2cdb09ca824242f72103b6bc40ae6bddc3bb70d936027ce2
+SSDN_API_KEY=***ROTATED-2026-07-18***
 ```
 
 ### For Local Development
@@ -134,7 +134,7 @@ SSDN_API_KEY=nsins_sk_2cdb09ca824242f72103b6bc40ae6bddc3bb70d936027ce2
 # Just run it!
 
 # Option 2: Not on Tailscale
-export SSDN_API_KEY=nsins_sk_2cdb09ca824242f72103b6bc40ae6bddc3bb70d936027ce2
+export SSDN_API_KEY=***ROTATED-2026-07-18***
 ```
 
 ---

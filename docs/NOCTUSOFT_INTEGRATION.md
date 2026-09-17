@@ -7,7 +7,7 @@ The Scholaracle scraper library includes built-in support for the Noctusoft API 
 ### 1. Set Environment Variable
 
 ```bash
-export SSDN_API_KEY=nsins_sk_2cdb09ca824242f72103b6bc40ae6bddc3bb70d936027ce2
+export SSDN_API_KEY=***ROTATED-2026-07-18***
 ```
 
 **On Tailscale:** No API key needed! The relay auto-detects Tailscale IPs (`100.64.8.0/16`) and auto-injects credentials.
@@ -117,7 +117,7 @@ Railway has static outbound IPs — they auto-bind within 24 hours. Use API key 
 
 ```bash
 # Set in Railway environment variables
-SSDN_API_KEY=nsins_sk_2cdb09ca824242f72103b6bc40ae6bddc3bb70d936027ce2
+SSDN_API_KEY=***ROTATED-2026-07-18***
 ```
 
 ### Vercel

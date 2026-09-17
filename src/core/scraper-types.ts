@@ -85,6 +85,12 @@ export interface IScraperConfig {
     readonly skipDownloads?: boolean;
     readonly maxConcurrentDownloads?: number;
     readonly assetSizeLimit?: number;
+    /**
+     * Directory for a persistent browser profile. When set, cookies/sessions
+     * survive across runs — an SSO login (e.g. Google) completed once, with any
+     * MFA challenge answered manually, is reused by subsequent runs.
+     */
+    readonly profileDir?: string;
   };
 }
 

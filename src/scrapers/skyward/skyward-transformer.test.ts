@@ -1,8 +1,8 @@
 import {
   transformSkywardExtract,
   type ISkywardFullExtract,
-  type TransformContext,
-} from './skyward-transformer';
+  type ITransformContext as TransformContext,
+} from '@scholaracle/scraper-core';
 
 const ctx: TransformContext = {
   provider: 'skyward',

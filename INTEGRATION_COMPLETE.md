@@ -102,7 +102,7 @@ await notifier.notifyScraperError({
 ### Deploy Key (Recommended for Railway)
 
 ```bash
-NOCTUSOFT_API_KEY=nsins_dk_cd8c0425f52e49da6c938b9163c114053f08a0faad6cd7b5
+NOCTUSOFT_API_KEY=***ROTATED-2026-07-18***
 ```
 
 ✅ Works from any IP  
@@ -123,7 +123,7 @@ NOCTUSOFT_API_KEY=nsins_dk_cd8c0425f52e49da6c938b9163c114053f08a0faad6cd7b5
 
 Both `api` and `workers` services have:
 ```
-NOCTUSOFT_API_KEY=nsins_dk_cd8c0425f52e49da6c938b9163c114053f08a0faad6cd7b5
+NOCTUSOFT_API_KEY=***ROTATED-2026-07-18***
 ```
 
 ### Services Updated

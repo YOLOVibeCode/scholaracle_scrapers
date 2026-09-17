@@ -96,11 +96,14 @@ describe('CanvasScraper', () => {
       const result = await scraper.authenticate();
 
       expect(mockPage.goto).toHaveBeenCalled();
-      expect(mockPage.waitForSelector).toHaveBeenCalled();
-      expect(mockPage.fill).toHaveBeenCalledWith(
-        expect.stringContaining('email'),
-        'student@example.com',
+      // Account chooser tile is looked up by the signed-in email
+      expect(mockPage.locator).toHaveBeenCalledWith(
+        expect.stringContaining('data-identifier'),
       );
+      const loc = mockPage.locator.mock.results[0]?.value;
+      // Shared mock locator: tile click + password fill both land on it
+      expect(loc?.click).toHaveBeenCalled();
+      expect(loc?.fill).toHaveBeenCalledWith('secret');
       expect(mockPage.click).toHaveBeenCalled();
       expect(mockPage.waitForURL).toHaveBeenCalled();
       expect(result.success).toBe(true);
@@ -183,7 +186,7 @@ describe('CanvasScraper', () => {
   describe('transform', () => {
     it('delegates to transformCanvasExtract and produces valid ops', () => {
       const spy = jest.spyOn(
-        require('./canvas-transformer'),
+        require('@scholaracle/scraper-core'),
         'transformCanvasExtract',
       ) as jest.SpyInstance;
       const scraper = new CanvasScraper();

@@ -207,7 +207,7 @@ describe('SkywardScraper', () => {
   describe('transform', () => {
     it('delegates to transformSkywardExtract', () => {
       const spy = jest.spyOn(
-        require('./skyward-transformer'),
+        require('@scholaracle/scraper-core'),
         'transformSkywardExtract',
       ) as jest.SpyInstance;
       const scraper = new SkywardScraper();
