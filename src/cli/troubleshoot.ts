@@ -12,10 +12,9 @@ export async function troubleshootCommand(): Promise<void> {
   const config = new ScraperConfig();
   const configData = config.load();
 
-  if (!configData.aiProvider || !configData.aiApiKey) {
-    console.log('  No AI provider configured.');
-    console.log('  Run: npx scholaracle-scraper setup');
-    console.log('  Or use the prompt template in prompts/troubleshoot-scraper.md\n');
+  if (!configData.connectorToken) {
+    console.log('  No connector token. Run: npx scholaracle-scraper setup');
+    console.log('  Model calls go through the Scholaracle API.\n');
     return;
   }
 
@@ -92,7 +91,7 @@ export async function troubleshootCommand(): Promise<void> {
   console.log('\n  Analyzing with AI...\n');
 
   try {
-    const aiClient = new AiClient(configData.aiProvider, configData.aiApiKey);
+    const aiClient = new AiClient(configData.apiBaseUrl, configData.connectorToken);
     const analysis = await aiClient.troubleshoot(errorText, scraperCode);
 
     console.log('  ──── AI Analysis ────\n');

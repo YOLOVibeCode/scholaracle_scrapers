@@ -69,45 +69,12 @@ export async function setupCommand(): Promise<void> {
     }
   }
 
-  // Step 3: AI provider (optional)
-  const { setupAi } = await inquirer.prompt([{
-    type: 'confirm',
-    name: 'setupAi',
-    message: 'Set up AI-powered scraper generation? (recommended)',
-    default: true,
-  }]);
-
-  let aiProvider: 'openai' | 'anthropic' | 'gemini' | undefined;
-  let aiApiKey: string | undefined;
-
-  if (setupAi) {
-    const answers = await inquirer.prompt([
-      {
-        type: 'list',
-        name: 'aiProvider',
-        message: 'Which AI provider?',
-        choices: [
-          { name: 'OpenAI (ChatGPT)', value: 'openai' },
-          { name: 'Anthropic (Claude)', value: 'anthropic' },
-          { name: 'Google (Gemini)', value: 'gemini' },
-        ],
-      },
-      {
-        type: 'input',
-        name: 'aiApiKey',
-        message: 'Enter your AI API key:',
-      },
-    ]);
-    aiProvider = answers.aiProvider;
-    aiApiKey = answers.aiApiKey;
-  }
+  console.log('  Model calls use your Scholaracle account. No vendor API key is stored.\n');
 
   // Save config
   config.save({
     apiBaseUrl,
     connectorToken,
-    aiProvider,
-    aiApiKey,
   });
 
   console.log('\n  ✓ Configuration saved to ~/.scholaracle-scraper/config.json');

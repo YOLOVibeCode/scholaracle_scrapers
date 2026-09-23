@@ -1,103 +1,29 @@
 /**
  * Unified local scraper — runs all configured scrapers for a student,
- * reconciles grades across SIS/LMS with optional AI normalization,
- * and uploads to Scholarmancy.
+ * reconciles grades across SIS/LMS for a local report, and uploads to
+ * Scholarmancy. Makes no model calls.
  *
  * Usage:
  *   npx ts-node --transpile-only run-all.ts
  *   npx ts-node --transpile-only run-all.ts --upload
  *   npx ts-node --transpile-only run-all.ts --platform skyward
  *   npx ts-node --transpile-only run-all.ts --student "Ava Lewis" --upload
- *   npx ts-node --transpile-only run-all.ts --skip-ai --headless
+ *   npx ts-node --transpile-only run-all.ts --headless
  *   npx ts-node --transpile-only run-all.ts --upload --skip-downloads
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { createInterface } from 'node:readline';
 import { ScraperConfig, type IScraperProfile, type IStudentProfile } from './src/core/config';
 import { createScraper, isProviderSis } from './src/core/scraper-registry';
 import { validateEnvelope } from '@scholaracle/scraper-core';
 import { ScholaracleUploader } from './src/core/uploader';
 import { reconcileGrades, type IReconciledGrade } from './src/core/grade-reconciler';
-import { AiClient, type AiProvider } from './src/ai/client';
-import { getCachedNormalizations, setCachedNormalizations } from './src/core/course-normalization-cache';
+import { getCachedNormalizations } from './src/core/course-normalization-cache';
 import type { IScraperConfig, IScraperProgress, ISlcIngestEnvelopeV1 } from './src/core/types';
 
 // ---------------------------------------------------------------------------
 // Interactive prompts
 // ---------------------------------------------------------------------------
-
-async function prompt(question: string): Promise<string> {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer.trim());
-    });
-  });
-}
-
-async function promptForAiSetup(
-  configMgr: ScraperConfig,
-  skipAi: boolean,
-): Promise<{ provider?: AiProvider; apiKey?: string }> {
-  if (skipAi) return {};
-
-  const configData = configMgr.load();
-  if (configData.aiProvider && configData.aiApiKey) {
-    return { provider: configData.aiProvider as AiProvider, apiKey: configData.aiApiKey };
-  }
-
-  console.log('\n  \u{1F916} AI-assisted course normalization is available but not configured.');
-  console.log('  This helps match courses like "ALGEBRA 1" (Skyward) with "algebra" (Canvas).\n');
-
-  const choice = await prompt('  Would you like to set up AI normalization? (y/n): ');
-  if (choice.toLowerCase() !== 'y') {
-    console.log('  Skipping AI -- using rule-based normalization only.\n');
-    return {};
-  }
-
-  console.log('\n  Choose an AI provider:');
-  console.log('    1. Google Gemini (free tier, recommended)');
-  console.log('    2. OpenAI GPT-4');
-  console.log('    3. Anthropic Claude\n');
-
-  const providerChoice = await prompt('  Enter choice (1-3): ');
-  let provider: AiProvider;
-  let helpUrl: string;
-
-  switch (providerChoice) {
-    case '1':
-      provider = 'gemini';
-      helpUrl = 'https://aistudio.google.com/apikey';
-      break;
-    case '2':
-      provider = 'openai';
-      helpUrl = 'https://platform.openai.com/api-keys';
-      break;
-    case '3':
-      provider = 'anthropic';
-      helpUrl = 'https://console.anthropic.com/settings/keys';
-      break;
-    default:
-      console.log('  Invalid choice. Skipping AI setup.\n');
-      return {};
-  }
-
-  console.log(`\n  Get your ${provider.toUpperCase()} API key here: ${helpUrl}`);
-  const apiKey = await prompt(`  Enter your ${provider.toUpperCase()} API key: `);
-
-  if (!apiKey) {
-    console.log('  No API key provided. Skipping AI setup.\n');
-    return {};
-  }
-
-  // Save to config
-  configMgr.update({ aiProvider: provider, aiApiKey: apiKey });
-  console.log(`  \u{2705} ${provider.toUpperCase()} API key saved to ~/.scholaracle-scraper/config.json\n`);
-
-  return { provider, apiKey };
-}
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing
@@ -106,7 +32,6 @@ async function promptForAiSetup(
 interface ICliArgs {
   readonly upload: boolean;
   readonly headless: boolean;
-  readonly skipAi: boolean;
   readonly skipDownloads: boolean;
   readonly studentFilter?: string;
   readonly platformFilter?: string;
@@ -123,7 +48,6 @@ function parseArgs(): ICliArgs {
   return {
     upload: args.includes('--upload'),
     headless: !args.includes('--headed'),
-    skipAi: args.includes('--skip-ai'),
     skipDownloads: args.includes('--skip-downloads'),
     studentFilter,
     platformFilter,
@@ -208,14 +132,13 @@ function buildScraperConfig(
 }
 
 // ---------------------------------------------------------------------------
-// AI normalization
+// Course-title map for the local report. A scrape run makes no model calls;
+// cross-source linking runs on the Scholaracle API after upload.
 // ---------------------------------------------------------------------------
 
-async function buildCanonicalMap(
+function buildCanonicalMap(
   envelopes: ReadonlyArray<{ readonly envelope: ISlcIngestEnvelopeV1; readonly provider: string }>,
-  configData: { aiProvider?: string; aiApiKey?: string },
-  skipAi: boolean,
-): Promise<Record<string, string>> {
+): Record<string, string> {
   const allTitles: { raw: string; provider: string; period?: string }[] = [];
   for (const { envelope, provider } of envelopes) {
     for (const op of envelope.ops) {
@@ -226,41 +149,7 @@ async function buildCanonicalMap(
       }
     }
   }
-
-  if (allTitles.length === 0 || skipAi) return {};
-
-  // Check cache first
-  const cached = getCachedNormalizations(allTitles);
-  const uncached = allTitles.filter(t => !cached[t.raw]);
-
-  if (uncached.length === 0) {
-    console.log('  \u{1F4BE} All course titles found in cache');
-    return cached;
-  }
-
-  if (!configData.aiProvider || !configData.aiApiKey) {
-    console.log('  \u{26A0}\uFE0F  No AI provider configured -- using rule-based normalization only');
-    return cached;
-  }
-
-  console.log(`  \u{1F916} Normalizing ${uncached.length} course titles via AI (${configData.aiProvider})...`);
-  try {
-    const ai = new AiClient(configData.aiProvider as AiProvider, configData.aiApiKey);
-    const aiResult = await ai.normalizeCourseTitles(uncached);
-
-    // Cache the results
-    const toCache = Object.entries(aiResult).map(([raw, canonical]) => {
-      const src = uncached.find(t => t.raw === raw);
-      return { raw, provider: src?.provider ?? '', canonical };
-    });
-    setCachedNormalizations(toCache);
-
-    return { ...cached, ...aiResult };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.warn(`  \u{26A0}\uFE0F  AI normalization failed: ${msg}. Falling back to rule-based.`);
-    return cached;
-  }
+  return allTitles.length === 0 ? {} : getCachedNormalizations(allTitles);
 }
 
 // ---------------------------------------------------------------------------
@@ -315,7 +204,7 @@ async function main(): Promise<void> {
   mkdirSync('output', { recursive: true });
 
   const configMgr = new ScraperConfig();
-  let configData = configMgr.load();
+  const configData = configMgr.load();
 
   const students = configData.students ?? [];
   const profiles = configData.scraperProfiles ?? [];
@@ -325,19 +214,12 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Prompt for AI setup if needed
-  const aiConfig = await promptForAiSetup(configMgr, cliArgs.skipAi);
-  if (aiConfig.provider && aiConfig.apiKey) {
-    configData = configMgr.load(); // Reload after potential update
-  }
-
   console.log('\n  \u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}');
   console.log('  Scholarmancy Unified Scraper');
   console.log('  \u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}\u{2550}');
   console.log(`  Upload:   ${cliArgs.upload ? 'YES \u{2192} ' + configData.apiBaseUrl : 'NO (local only)'}`);
-  console.log(`  Assets:   ${cliArgs.skipDownloads ? 'SKIP (--skip-downloads)' : cliArgs.upload ? 'YES (download + re-upload)' : 'SKIP (local-only mode)'}`);
+  console.log(`  Assets:   ${cliArgs.skipDownloads ? 'SKIP (--skip-downloads)' : cliArgs.upload ? 'YES (download + re-upload to Scholaracle, stored on the relay)' : 'SKIP (local-only mode)'}`);
   console.log(`  Headless: ${cliArgs.headless ? 'YES' : 'NO (visible browser)'}`);
-  console.log(`  AI:       ${cliArgs.skipAi ? 'DISABLED' : configData.aiProvider ?? 'not configured'}`);
   if (cliArgs.platformFilter) console.log(`  Platform: ${cliArgs.platformFilter} only`);
   if (cliArgs.studentFilter) console.log(`  Student:  ${cliArgs.studentFilter} only`);
   console.log('');
@@ -438,7 +320,7 @@ async function main(): Promise<void> {
     if (sisEnvelopes.length > 0 && lmsEnvelopes.length > 0) {
       console.log('\n  \u{1F504} Reconciling grades across sources...');
 
-      const canonicalMap = await buildCanonicalMap(results, configData, cliArgs.skipAi);
+      const canonicalMap = buildCanonicalMap(results);
 
       const sisOps = sisEnvelopes.flatMap(r => r.envelope.ops);
       const lmsOps = lmsEnvelopes.flatMap(r => r.envelope.ops);

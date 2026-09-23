@@ -31,11 +31,6 @@ export async function generateCommand(options?: IGenerateOptions): Promise<void>
     console.log('  No valid connector token. Run: npx scholaracle-scraper setup\n');
     return;
   }
-  if (!configData.aiProvider || !configData.aiApiKey) {
-    console.log('  No AI provider configured. Run: npx scholaracle-scraper setup\n');
-    return;
-  }
-
   // Step 2: Fetch and select students
   let students: IStudentProfile[];
   try {
@@ -175,11 +170,11 @@ Platform directory name: ${platformSlug}
 Students: ${studentIds.length}`;
 
   console.log('\n  Generating scraper with AI...');
-  console.log(`  Using ${configData.aiProvider}...\n`);
+  console.log('  Using the Scholaracle API...\n');
 
   let response: string;
   try {
-    const aiClient = new AiClient(configData.aiProvider, configData.aiApiKey!);
+    const aiClient = new AiClient(configData.apiBaseUrl, configData.connectorToken!);
     response = await aiClient.generate(userPrompt);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

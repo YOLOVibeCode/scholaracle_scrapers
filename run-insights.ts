@@ -1,6 +1,6 @@
 /**
- * Full insights pipeline: reconcile grades → record history → analyze risk → AI action plan.
- * Uses existing envelope data from output/ directory.
+ * Local insights: reconcile grades → record history → analyze risk.
+ * Uses existing envelope data from output/ directory. Makes no model calls.
  *
  * Usage: npx ts-node --transpile-only run-insights.ts
  */
@@ -8,8 +8,6 @@
 import { reconcileGrades } from './src/core/grade-reconciler';
 import { GradeHistory } from './src/core/grade-history';
 import { buildStudentReport } from './src/core/student-insights';
-import { AiClient } from './src/ai/client';
-import { ScraperConfig } from './src/core/config';
 import { readFileSync, existsSync } from 'node:fs';
 
 async function main(): Promise<void> {
@@ -74,54 +72,6 @@ async function main(): Promise<void> {
       const days = d.daysUntilDue === 1 ? 'TOMORROW' : `${d.daysUntilDue} days`;
       console.log(`  ${days.padEnd(12)} ${d.title.substring(0, 40).padEnd(42)} ${course.substring(0, 20)}${pts}${majorTag}`);
     }
-  }
-
-  // Step 4: AI Action Plan
-  const config = new ScraperConfig();
-  const configData = config.load();
-  if (configData.aiProvider && configData.aiApiKey) {
-    console.log('\n  ── AI ACTION PLAN ──\n');
-    console.log('  Generating recommendations...\n');
-
-    const atRiskSummary = report.riskAssessments
-      .filter(r => r.riskLevel === 'critical' || r.riskLevel === 'high' || r.riskLevel === 'moderate')
-      .map(r => {
-        const trend = trends[r.courseName];
-        return `${r.courseName}: ${r.officialGrade ?? 'N/A'}% (${r.riskLevel}) — ` +
-          `trend: ${r.trend}, velocity: ${r.velocity} pts/week` +
-          (r.teacherName ? `, teacher: ${r.teacherName}` : '') +
-          (r.teacherEmail ? ` <${r.teacherEmail}>` : '') +
-          `\n    Reasons: ${r.reasons.join('; ')}`;
-      }).join('\n');
-
-    const deadlineSummary = report.upcomingDeadlines.slice(0, 10)
-      .map(d => `${d.title} — due in ${d.daysUntilDue} days (${d.pointsPossible ?? '?'} pts)${d.major ? ' [MAJOR]' : ''}`)
-      .join('\n');
-
-    const context = `Student: Ava Lewis, 9th grade, Lake Dallas High School
-
-AT-RISK COURSES:
-${atRiskSummary || 'None'}
-
-MISSING ASSIGNMENTS: ${report.missingAssignmentCount} total
-
-UPCOMING DEADLINES:
-${deadlineSummary || 'None in the next 14 days'}
-
-GRADE HISTORY TRENDS:
-${Object.entries(trends).map(([name, t]) => `${name}: ${t.direction} (${t.velocity > 0 ? '+' : ''}${t.velocity} pts/week, ${t.dataPoints} data points)`).join('\n')}`;
-
-    try {
-      const ai = new AiClient(configData.aiProvider, configData.aiApiKey);
-      const plan = await ai.advise(context);
-      console.log(plan.split('\n').map(l => '  ' + l).join('\n'));
-    } catch (err) {
-      console.error('  AI advisor failed:', err instanceof Error ? err.message : String(err));
-      console.log('  (Set AI_PROVIDER and AI_API_KEY in config to enable AI recommendations)');
-    }
-  } else {
-    console.log('\n  ── AI ACTION PLAN ──\n');
-    console.log('  AI advisor not configured. Run `npx scholaracle-scraper setup` to add AI provider.');
   }
 
   console.log('');
