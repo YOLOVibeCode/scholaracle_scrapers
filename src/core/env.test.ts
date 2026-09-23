@@ -126,7 +126,6 @@ describe('ENV_KEYS', () => {
     expect(ENV_KEYS).toContain('SKYWARD_BASE_URL');
     expect(ENV_KEYS).toContain('SKYWARD_USERNAME');
     expect(ENV_KEYS).toContain('SKYWARD_PASSWORD');
-    expect(ENV_KEYS).toContain('ANTHROPIC_API_KEY');
     expect(ENV_KEYS).toContain('NOCTUSOFT_API_KEY');
     expect(ENV_KEYS).toContain('HOME');
   });

@@ -11,7 +11,6 @@ export const ENV_KEYS = Object.freeze([
   'SKYWARD_BASE_URL',
   'SKYWARD_USERNAME',
   'SKYWARD_PASSWORD',
-  'ANTHROPIC_API_KEY',
   'NOCTUSOFT_API_KEY',
   'HOME',
 ] as const);

@@ -51,7 +51,8 @@ Every op must have:
 ## 12 Entity Types (extract ALL that the platform supports)
 
 1. studentProfile: { name(req), firstName, lastName, studentId, gradeLevel, school, district }
-2. course: { title(req), courseCode, subjectArea, teacherName, teacherEmail, period, room, startTime, endTime, url }
+2. course: { title(req), courseCode, subjectArea, teacherName, teacherEmail, period, room, startTime, endTime, tutorialWindow, url }
+   tutorialWindow is the teacher's extra-help window for that subject (e.g. "Tue/Thu 7:15-7:45 AM"), not the class meeting time. Include it only when the portal shows it.
 3. assignment: { title(req), description, dueAt, assignedAt, status, pointsPossible, pointsEarned, percentScore, letterGrade, category, categoryWeight, submittedAt, gradedAt, teacherFeedback, rubricScores[], isLate, isMissing, attachments[], courseExternalId }
 4. gradeSnapshot: { courseExternalId(req), asOfDate(req), letterGrade, percentGrade, earnedPoints, possiblePoints, missingCount, lateCount, categories[], trend, classAverage, teacherComments }
 5. attendanceEvent: { date(req), status(req: present|absent|tardy|excused|unexcused|partial|field_trip), periodName, courseName, minutesMissed, excuseReason }

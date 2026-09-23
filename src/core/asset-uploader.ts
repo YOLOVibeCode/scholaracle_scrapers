@@ -16,7 +16,9 @@ export interface IUploadAssetMetadata {
 
 /**
  * Uploads downloaded asset files to Scholaracle via POST /api/ingest/v1/assets/upload.
- * Uses same connector token auth as ScholaracleUploader.
+ * Uses the same connector token as ScholaracleUploader.
+ * The API stores the bytes on noctusoft-relay. This client does not call the
+ * relay or a model host.
  */
 export class AssetUploader {
   private readonly client: AxiosInstance;

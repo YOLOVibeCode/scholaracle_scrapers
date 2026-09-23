@@ -82,18 +82,18 @@ describe('generateCommand', () => {
     logSpy.mockRestore();
   });
 
-  it('should exit early when AI provider is not configured', async () => {
+  it('starts the wizard when a connector token is present and no vendor key is stored', async () => {
     const futureExp = Math.floor(Date.now() / 1000) + 365 * 24 * 3600;
     const fakeJwt = `eyJ.${Buffer.from(JSON.stringify({ exp: futureExp })).toString('base64url')}.sig`;
     const cfg = new ScraperConfig(TEST_DIR);
     cfg.save({ apiBaseUrl: 'https://api.scholarmancy.com', connectorToken: fakeJwt });
+    mockPrompt.mockResolvedValueOnce({ studentIds: [] });
 
     const logSpy = jest.spyOn(console, 'log').mockImplementation();
 
     await generateCommand({ configDir: TEST_DIR });
 
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('AI'));
-    expect(mockPrompt).not.toHaveBeenCalled();
+    expect(mockPrompt).toHaveBeenCalled();
     logSpy.mockRestore();
   });
 
