@@ -1,6 +1,6 @@
 # Noctusoft API Relay Integration
 
-The Scholaracle scraper library includes built-in support for the Noctusoft API Relay Network — a unified gateway for SendGrid (email), Twilio (SMS), Square (payments), and Google APIs.
+The Scholaracle scraper library includes built-in support for the Noctusoft API Relay Network — a unified gateway for SendGrid (email), Twilio (SMS), and Google APIs.
 
 ## Quick Start
 
@@ -70,7 +70,6 @@ await notifier.notifyMissingAssignments({
 |---------|------------|-----------------|
 | **SendGrid** | `api.sendgrid.com` | `api.sndgrid.us.noctusoft.com` |
 | **Twilio** | `api.twilio.com` | `api.twilio.us.noctusoft.com` |
-| **Square** | `connect.squareup.com` | `connect.usapayng.us.noctusoft.com` |
 | **Google** | `*.googleapis.com` | `googleapis.us.noctusoft.com` |
 
 ### Authentication
@@ -207,7 +206,7 @@ The relay runs a daily test harness at 7 AM CST checking:
 - DNS resolution (7 domains)
 - SSL certificates
 - Health checks (5 services)
-- Upstream connectivity (SendGrid, Twilio, Square, Google)
+- Upstream connectivity (SendGrid, Twilio, Google)
 - End-to-end relay tests
 - Message history read-back
 
