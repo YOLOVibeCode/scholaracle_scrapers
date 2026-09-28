@@ -229,7 +229,7 @@ regression.
 
 ## Notifications (Email & SMS)
 
-The library includes built-in support for **Noctusoft API Relay** — a unified gateway for SendGrid (email), Twilio (SMS), Square (payments), and Google APIs.
+The library includes built-in support for **Noctusoft API Relay** — a unified gateway for SendGrid (email), Twilio (SMS), and Google APIs.
 
 ### Quick Setup
 
