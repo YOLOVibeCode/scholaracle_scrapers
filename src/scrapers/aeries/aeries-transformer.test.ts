@@ -15,7 +15,7 @@ function makeExtract(overrides?: Partial<IAeriesFullExtract>): IAeriesFullExtrac
   return {
     students: [
       {
-        name: 'Casey Vega',
+        name: 'Casey Owner',
         studentId: '100001',
         grade: '9',
         school: 'Keller High School',
@@ -102,7 +102,7 @@ describe('transformAeriesExtract', () => {
     const profile = ops.find(o => o.entity === 'studentProfile');
     expect(profile).toBeDefined();
     const rec = profile!.record as Record<string, unknown>;
-    expect(rec.name).toBe('Casey Vega');
+    expect(rec.name).toBe('Casey Owner');
     expect(rec.studentId).toBe('100001');
     expect(rec.gradeLevel).toBe('9');
     expect(rec.school).toBe('Keller High School');
